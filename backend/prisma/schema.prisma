@@ -11,3 +11,39 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// Énumération prisma
+// Par quelle méthode le compte a été créé
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  FACEBOOK
+}
+
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  passwordHash  String?
+  AuthProvider  AuthProvider @default(EMAIL)
+  emailVerified Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Public information
+  displayName String?
+  publicBio   String?
+  avatarUrl   String?
+
+  // Friends information
+  friendsBio      String?
+  friendsLocation String?
+
+  // Private information
+  fullName     String?
+  phoneNumber  String?
+  privateEmail String?
+
+  // Music preferences
+  favoriteGenres String[]
+}
