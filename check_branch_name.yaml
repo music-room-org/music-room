@@ -1,0 +1,35 @@
+name: Validate Branch Name
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - master
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  validate-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Branch Name
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH_NAME="${{ github.head_ref }}"
+          else
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          fi
+
+          echo "Checking branch name: $BRANCH_NAME"
+
+          # Expression régulière pour feat/, fix/, refactor/, chore/
+          REGEX="^(feat|fix|refactor|chore)\/[a-zA-Z0-9._-]+$"
+
+          if [[ ! "$BRANCH_NAME" =~ $REGEX ]]; then
+            echo "Invalid branch name '$BRANCH_NAME'"
+            echo "Branch names must start with: feat/, fix/, refactor/, or chore/"
+            echo "Example: feat/add-login-button"
+            exit 1
+          else
+            echo "'$BRANCH_NAME' is valid!"
+          fi
