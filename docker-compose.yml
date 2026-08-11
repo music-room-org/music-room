@@ -1,0 +1,31 @@
+services:
+
+# --- Conteneur 1 : la base de données PostgreSQL ---
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: musicroom
+      POSTGRES_PASSWORD: musicroom
+      POSTGRES_DB: musicroom
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+# --- Conteneur 2 : notre backend Node + Prisma ---
+  backend:
+    build: ./backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgresql://musicroom:musicroom@db:5432/musicroom"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+volumes:
+  db_data:
