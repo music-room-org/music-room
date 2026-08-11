@@ -19,5 +19,5 @@ RUN npx prisma generate
 # On indique le port sur lequel le serveur écoutera
 EXPOSE 3000
 
-# Commande lancée au démarrage du conteneur
-CMD ["npm", "run", "dev"]
+# Au démarrage du conteneur : lance le serveur NestJS en mode dev (rechargement auto)
+CMD ["npm", "run", "start:dev"]
