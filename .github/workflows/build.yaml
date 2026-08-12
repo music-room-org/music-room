@@ -9,8 +9,8 @@ on:
     types: [opened, edited, synchronize, reopened]
 
 jobs:
-  check-expo-mobile:
-    name: CI
+  expo-build:
+    name: Expo Mobile Build
     runs-on: ubuntu-latest
 
     defaults:
