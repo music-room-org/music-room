@@ -22,52 +22,23 @@
 ### Figma (a créer)
 
 *****************************************************************************************************
+# Backend
 
-🚀 Lancer le backend (NestJS + Prisma)
+## Lancer le projet
 
-⚠️ État actuel : le serveur démarre et la route /health répond. 
-
-Prérequis
-Node.js 20 
-npm (installé avec Node)
-Étapes
-1. Cloner le projet :
-git clone git@github.com:music-room-org/music-room.git
-cd music-room
-
-2. Aller dans le dossier backend
+```bash
 cd backend
-
-3. Installer les dépendances
 npm install
-
-4. Générer le client Prisma
 npx prisma generate
-
-5. Lancer le serveur en mode développement
 npm run start:dev
+```
 
-Le serveur démarre avec rechargement automatique (il se relance à chaque modif du code).
+Le serveur démarre sur http://localhost:3000
 
-Pour vérifier que ça marche
+## Tester
 
-Le serveur écoute sur http://localhost:3000.
-
-Dans un autre terminal (ou dans le navigateur) :
-
+```bash
 curl http://localhost:3000/health
+```
 
-Réponse attendue :
-{"status":"ok"}
-
-
-Structure du backend
-backend/
-├── src/                  → code NestJS
-│   ├── main.ts           → point de démarrage
-│   ├── app.module.ts     → module racine
-│   └── health.controller.ts → route /health
-├── prisma/
-│   └── schema.prisma     → plan de la base (modèle User…)
-├── prisma.config.ts      → config Prisma
-└── package.json
+Réponse attendue : `{"status":"ok"}`
