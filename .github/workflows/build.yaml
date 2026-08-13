@@ -10,7 +10,6 @@ on:
 
 jobs:
   expo-build:
-    name: Expo Mobile Build
     runs-on: ubuntu-latest
 
     defaults:
