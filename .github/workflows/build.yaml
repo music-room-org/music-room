@@ -10,6 +10,7 @@ on:
 
 jobs:
   expo-build:
+    name: Expo Build
     runs-on: ubuntu-latest
 
     defaults:
@@ -37,7 +38,7 @@ jobs:
         run: npx expo export
 
   nest-build:
-    name: NestJS Backend Build
+    name: NestJS Build
     runs-on: ubuntu-latest
 
     defaults:
