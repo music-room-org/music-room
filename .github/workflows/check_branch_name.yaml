@@ -8,7 +8,7 @@ jobs:
   validate-branch-name:
     name: Validate Branch Name
     runs-on: ubuntu-latest
-
+ 
     steps:
       - name: Check Branch Name
         run: |
