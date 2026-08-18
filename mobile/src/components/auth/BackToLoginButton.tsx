@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export interface BackToLoginButtonProps {
   onPress: () => void;
@@ -29,8 +30,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   text: {
+    fontFamily: FONTS.medium,
     fontSize: 14,
-    fontWeight: "700",
     color: COLORS.primary,
     textAlign: "center",
   },

@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export interface AuthHeaderProps {
   title?: string;
@@ -31,17 +32,16 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   title: {
+    fontFamily: FONTS.bold,
     fontSize: 40,
-    fontWeight: "900",
     color: COLORS.textPrimary,
     letterSpacing: -0.5,
     marginBottom: 8,
   },
   subtitle: {
+    fontFamily: FONTS.regular,
     fontSize: 21,
-    fontWeight: "600",
     color: COLORS.textSecondary,
     lineHeight: 28,
   },
 });
-

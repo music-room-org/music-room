@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, TextInput, TextInputProps, TouchableOpacity, View } from "react-native";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export interface CustomInputProps extends TextInputProps {
   leftIcon?: React.ReactNode;
@@ -57,8 +58,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    fontFamily: FONTS.regular,
     fontSize: 16,
     color: COLORS.inputText,
-    fontWeight: "500",
   },
 });

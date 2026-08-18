@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export type AuthMode = "login" | "signup" | "forgot_password" | "email_check";
 
@@ -78,8 +79,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   tabText: {
+    fontFamily: FONTS.semiBold,
     fontSize: 18,
-    fontWeight: "700",
     color: COLORS.tabInactive,
     textAlign: "center",
   },
@@ -101,8 +102,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   singleTabText: {
+    fontFamily: FONTS.semiBold,
     fontSize: 19,
-    fontWeight: "700",
     color: COLORS.primary,
     textAlign: "center",
   },

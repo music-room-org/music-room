@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export type SocialVariant = "google" | "facebook";
 
@@ -110,8 +111,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   text: {
+    fontFamily: FONTS.medium,
     fontSize: 16,
-    fontWeight: "700",
     textAlign: "left",
   },
   googleText: {

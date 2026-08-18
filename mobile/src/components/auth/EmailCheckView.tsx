@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { BackToLoginButton } from "@/components/auth/BackToLoginButton";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export interface EmailCheckViewProps {
   email?: string;
@@ -45,8 +46,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   messageText: {
+    fontFamily: FONTS.regular,
     fontSize: 15,
-    fontWeight: "600",
     color: COLORS.textDescription,
     textAlign: "center",
     lineHeight: 22,
@@ -55,8 +56,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   emailText: {
+    fontFamily: FONTS.semiBold,
     fontSize: 16,
-    fontWeight: "800",
     color: COLORS.emailHighlight,
     textAlign: "center",
     marginVertical: 12,

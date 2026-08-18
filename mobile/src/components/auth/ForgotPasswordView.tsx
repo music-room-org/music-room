@@ -5,6 +5,7 @@ import { CustomInput } from "@/components/CustomInput";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { BackToLoginButton } from "@/components/auth/BackToLoginButton";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export interface ForgotPasswordViewProps {
   initialEmail?: string;
@@ -52,8 +53,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   instructionText: {
+    fontFamily: FONTS.regular,
     fontSize: 15,
-    fontWeight: "600",
     color: COLORS.textDescription,
     textAlign: "center",
     lineHeight: 22,

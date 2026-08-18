@@ -8,6 +8,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export interface PrimaryButtonProps extends TouchableOpacityProps {
   title: string;
@@ -43,8 +44,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   text: {
+    fontFamily: FONTS.medium,
     color: COLORS.white,
     fontSize: 17,
-    fontWeight: "800",
   },
 });

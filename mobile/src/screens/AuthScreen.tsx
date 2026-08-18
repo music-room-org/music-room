@@ -20,6 +20,7 @@ import {
   SocialButton,
 } from "@/components";
 import { COLORS } from "@/constants/colors";
+import { FONTS } from "@/constants/fonts";
 
 export function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>("login");
@@ -187,9 +188,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   passwordHintText: {
+    fontFamily: FONTS.regular,
     fontSize: 13,
     color: COLORS.textMuted,
-    fontWeight: "500",
     textAlign: "right",
   },
   forgotPasswordContainer: {
@@ -198,9 +199,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   forgotPasswordText: {
+    fontFamily: FONTS.semiBold,
     color: COLORS.primary,
     fontSize: 13,
-    fontWeight: "700",
   },
   submitButtonMargin: {
     marginTop: 10,
@@ -217,10 +218,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.divider,
   },
   dividerText: {
+    fontFamily: FONTS.regular,
     marginHorizontal: 14,
     color: COLORS.textMuted,
     fontSize: 14,
-    fontWeight: "500",
   },
   socialButtonMargin: {
     marginBottom: 12,
