@@ -1,16 +1,14 @@
 name: Validate Branch Name
 
 on:
-  push:
-    branches-ignore:
-      - main
-      - master
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
 jobs:
   validate-branch-name:
+    name: Validate Branch Name
     runs-on: ubuntu-latest
+
     steps:
       - name: Check Branch Name
         run: |
