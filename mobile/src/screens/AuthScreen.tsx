@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react-native";
 import {
   AuthHeader,
   AuthMode,
@@ -76,38 +76,30 @@ export function AuthScreen() {
             ) : (
               <View style={styles.formContainer}>
                 <CustomInput
-                  placeholder="Email"
+                  placeholder="john.doe@email.com"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   leftIcon={
-                    <Ionicons
-                      name="mail-outline"
-                      size={22}
-                      color={COLORS.inputIcon}
-                    />
+                    <Mail size={22} color={COLORS.inputIcon} />
                   }
                 />
 
                 <CustomInput
-                  placeholder="Password"
+                  placeholder="Enter password"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   leftIcon={
-                    <Ionicons
-                      name="lock-closed-outline"
-                      size={22}
-                      color={COLORS.inputIcon}
-                    />
+                    <LockKeyhole size={22} color={COLORS.inputIcon} />
                   }
                   rightIcon={
-                    <Ionicons
-                      name={showPassword ? "eye-off-outline" : "eye-outline"}
-                      size={22}
-                      color={COLORS.inputIcon}
-                    />
+                    showPassword ? (
+                      <EyeOff size={22} color={COLORS.inputIcon} />
+                    ) : (
+                      <Eye size={22} color={COLORS.inputIcon} />
+                    )
                   }
                   onRightIconPress={() => setShowPassword(!showPassword)}
                 />

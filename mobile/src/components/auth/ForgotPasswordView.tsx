@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Mail } from "lucide-react-native";
 import { CustomInput } from "@/components/CustomInput";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { BackToLoginButton } from "@/components/auth/BackToLoginButton";
@@ -27,13 +27,13 @@ export function ForgotPasswordView({
       </Text>
 
       <CustomInput
-        placeholder="Email"
+        placeholder="john.doe@email.com"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
         leftIcon={
-          <Ionicons name="mail-outline" size={22} color={COLORS.inputIcon} />
+          <Mail size={22} color={COLORS.inputIcon} />
         }
       />
 
