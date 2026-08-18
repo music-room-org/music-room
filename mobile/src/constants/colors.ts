@@ -1,0 +1,27 @@
+const WHITE = "#FFFFFF";
+
+export const COLORS = {
+  primary: "#EA9900",
+  background: "#F2F2F4",
+  cardBackground: "#F9F9FB",
+  cardBorder: "#EAEAEA",
+  shadow: "#000000",
+  textPrimary: "#050505",
+  textSecondary: "#1F1F1F",
+  textMuted: "#888888",
+  textDescription: "#666666",
+  emailHighlight: "#333333",
+  tabInactive: "#B0B0B0",
+  inputBackground: "#FAFAFA",
+  inputBorder: "#DCDCDC",
+  inputIcon: "#777777",
+  inputText: "#222222",
+  placeholder: "#9E9E9E",
+  divider: "#D8D8D8",
+  googleBackground: WHITE,
+  googleBorder: "#E5E5E5",
+  googleText: "#444444",
+  facebookBackground: "#1877F2",
+  facebookText: WHITE,
+  white: WHITE,
+};
