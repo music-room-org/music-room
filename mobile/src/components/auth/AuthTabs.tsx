@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/fonts";
 
-export type AuthMode = "login" | "signup" | "forgot_password" | "email_check";
+export type AuthMode = "login" | "signup" | "forgot_password" | "email_check" | "reset_password";
 
 export interface AuthTabsProps {
   mode: AuthMode;
