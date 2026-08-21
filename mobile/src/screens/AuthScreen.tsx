@@ -21,6 +21,7 @@ import {
   SocialButton,
   ResetPasswordView,
 } from "@/components";
+
 import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/fonts";
 
@@ -37,7 +38,7 @@ export function AuthScreen() {
   const isLogin = mode === "login";
   const API_URL = "http://localhost:3000/auth";
 
-  // Écoute des liens entrants (Deep Linking) corrigée
+  // Écoute des liens entrants (Deep Linking)
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
       const parsed = Linking.parse(event.url);

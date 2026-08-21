@@ -8,3 +8,5 @@ export * from "./auth/ForgotPasswordView";
 export * from "./auth/EmailCheckView";
 export * from "./auth/BackToLoginButton";
 export * from "./auth/ResetPasswordView";
+export * from "./CurrentlyPlayingCard";
+export * from "./PlaylistCard";
