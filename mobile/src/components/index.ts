@@ -13,3 +13,4 @@ export * from "./PlaylistCard";
 export * from "./SearchBar";
 export * from "./CategoryTabs";
 export * from "./TrackListItem";
+export * from "./PlaylistItem";

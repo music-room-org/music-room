@@ -2,7 +2,7 @@ import { View, ScrollView, Text, Image, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
 import { COLORS, FONTS } from "@/constants";
-import { SearchBar, CategoryTabs, TrackListItem } from "@/components";
+import { SearchBar, CategoryTabs, TrackListItem, PlaylistItem } from "@/components";
 
 export default function Research() {
 	const [activeTab, setActiveTab] = useState('Titles');
@@ -46,24 +46,24 @@ export default function Research() {
 
 				<View style={styles.sectionContainer}>
 					<Text style={styles.sectionTitle}>Popular playlist</Text>
-					<TrackListItem
+					<PlaylistItem
 						title="Psycho shit"
-						subtitle="The Strokes"
+						listenersText="3423 monthly listeners"
 						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
 					/>
-					<TrackListItem
+					<PlaylistItem
 						title="NUEVAYoL"
-						subtitle="Bad Bunny"
+						listenersText="Bad Bunny"
 						imageUrl="https://media.pitchfork.com/photos/682b43f9d6a2575d172e91a4/1:1/w_320,c_limit/Bad-Bunny-Debi-Tirar-Mas-Fotos.jpeg"
 					/>
-					<TrackListItem
+					<PlaylistItem
 						title="Man I need"
-						subtitle="Olivia Dean"
+						listenersText="Olivia Dean"
 						imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
 					/>
-					<TrackListItem
+					<PlaylistItem
 						title="Dai dai"
-						subtitle="Shakira"
+						listenersText="Shakira"
 						imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
 					/>
 				</View>
