@@ -41,7 +41,7 @@ export function HomeScreen() {
 				</View>
 
 				<View style={styles.sectionContainer}>
-					<Text style={styles.sectionTitle}>Currently playing by your friends</Text>
+					<Text style={styles.sectionTitle}>What your friends are listening to</Text>
 					{mockFriendsPlaying.map((item) => (
 						<CurrentlyPlayingCard 
 							key={item.id}
@@ -93,9 +93,9 @@ const styles = StyleSheet.create({
 		marginBottom: 8,
 	},
 	subTitle: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 16,
-		color: COLORS.textSecondary || '#666',
+		fontFamily: FONTS.medium,
+		fontSize: 14,
+		color: COLORS.textDescription,
 	},
 	yellowLine: {
 		height: 4,
