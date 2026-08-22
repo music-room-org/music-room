@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Home, Search, Disc, User } from "lucide-react-native";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
-import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { BottomTabBarProps } from "expo-router/build/react-navigation/bottom-tabs";
 import { COLORS } from "@/constants";
 
 const ICONS = {
@@ -94,6 +94,6 @@ const styles = StyleSheet.create({
 		alignItems: 'center'
 	},
 	activeIconContainer: {
-		backgroundColor: '#fdece4'
+		backgroundColor: COLORS.secondary
 	}
 });

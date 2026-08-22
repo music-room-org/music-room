@@ -10,3 +10,6 @@ export * from "./auth/BackToLoginButton";
 export * from "./auth/ResetPasswordView";
 export * from "./CurrentlyPlayingCard";
 export * from "./PlaylistCard";
+export * from "./SearchBar";
+export * from "./CategoryTabs";
+export * from "./TrackListItem";
