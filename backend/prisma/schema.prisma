@@ -58,4 +58,19 @@ model Playlist {
   // Relation : à quel utilisateur appartient cette playlist
   owner   User   @relation(fields: [ownerId], references: [id])
   ownerId String
+
+  tracks Track[]
+}
+
+model Track {
+  id       String   @id @default(uuid())
+  title    String
+  artist   String?
+  sourceId String
+  addedAt  DateTime @default(now())
+
+  // Relation : à quelle playlist appartient ce morceau
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
+  playlistId String
+
 }
