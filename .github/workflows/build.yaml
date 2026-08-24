@@ -45,6 +45,9 @@ jobs:
       run:
         working-directory: backend
 
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/music_room"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
