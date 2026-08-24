@@ -15,3 +15,7 @@ export * from "./CategoryTabs";
 export * from "./TrackListItem";
 export * from "./PlaylistItem";
 export * from "./LibraryPlaylistItem";
+export * from "./profile/ActivityItem";
+export * from "./profile/FriendAvatar";
+export * from "./profile/ProfileActionButton";
+export * from "./profile/ProfileStat";
