@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react-native";
+import * as Linking from 'expo-linking';
 import {
   AuthHeader,
   AuthMode,
@@ -18,6 +19,7 @@ import {
   FormCard,
   PrimaryButton,
   SocialButton,
+  ResetPasswordView,
 } from "@/components";
 import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/fonts";
@@ -27,19 +29,115 @@ export function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  
+  const [resetToken, setResetToken] = useState("");
 
   const isLogin = mode === "login";
+  const API_URL = "http://localhost:3000/auth";
 
-  const handleForgotPasswordSubmit = (targetEmail: string) => {
-    if (targetEmail.trim()) {
-      setEmail(targetEmail);
+  // Écoute des liens entrants (Deep Linking) corrigée
+  useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      const parsed = Linking.parse(event.url);
+      
+      // On récupère action, token et email depuis les paramètres
+      const { action, token, email: urlEmail } = parsed.queryParams || {};
+      
+      if (action === "reset-password" && token && urlEmail) {
+        setResetToken(token as string);
+        setEmail(urlEmail as string);
+        setMode("reset_password"); // Bascule l'écran sur ResetPasswordView
+      }
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink({ url });
+    });
+
+    const subscription = Linking.addEventListener("url", handleDeepLink);
+    return () => subscription.remove();
+  }, []);
+
+  const handleForgotPasswordSubmit = async (targetEmail: string) => {
+    if (!targetEmail.trim()) return;
+    try {
+      const response = await fetch(`${API_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+
+      if (response.ok) {
+        setEmail(targetEmail);
+        setMode("email_check");
+      } else {
+        const data = await response.json();
+        setErrorMessage(data.message || "Erreur lors de l'envoi de l'e-mail");
+      }
+    } catch (error) {
+      setErrorMessage("Impossible de joindre le serveur.");
     }
-    setMode("email_check");
   };
 
-  const handleMainSubmit = () => {
-    if (mode === "signup") {
-      setMode("email_check");
+  const handleResetPasswordSubmit = async (newPassword: string) => {
+    try {
+      const response = await fetch(`${API_URL}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email, 
+          token: resetToken, 
+          newPassword: newPassword 
+        }),
+      });
+
+      if (response.ok) {
+        setSuccessMessage("Mot de passe mis à jour ! Vous pouvez vous connecter.");
+        setMode("login");
+      } else {
+        const data = await response.json();
+        alert(data.message || "Erreur lors de la réinitialisation");
+      }
+    } catch (error) {
+      alert("Impossible de joindre le serveur.");
+    }
+  };
+
+  const handleMainSubmit = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      if (mode === "signup") {
+        const response = await fetch(`${API_URL}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        if (response.ok) {
+          setMode("email_check");
+        } else {
+          const data = await response.json();
+          setErrorMessage(data.message || "Error while signing up");
+        }
+      } else if (mode === "login") {
+        const response = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Login successed, token:", data.token);
+          setSuccessMessage("Connexion réussie");
+        } else {
+          const data = await response.json();
+          setErrorMessage(data.message || "Error while login in");
+        }
+      }
+    } catch (error) {
+      console.log("Communication error with the server:", error);
     }
   };
 
@@ -51,17 +149,17 @@ export function AuthScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header Section */}
         <AuthHeader />
-
-        {/* Card Section */}
         <View style={styles.cardWrapper}>
           <FormCard>
-            {/* Header / Tab Navigation */}
-            <AuthTabs mode={mode} onModeChange={setMode} />
+            {mode !== "reset_password" && <AuthTabs mode={mode} onModeChange={setMode} />}
 
-            {/* Mode Content Views */}
-            {mode === "forgot_password" ? (
+            {mode === "reset_password" ? (
+              <ResetPasswordView
+                onSubmit={handleResetPasswordSubmit}
+                onBackToLogin={() => setMode("login")}
+              />
+            ) : mode === "forgot_password" ? (
               <ForgotPasswordView
                 initialEmail={email}
                 onSubmit={handleForgotPasswordSubmit}
@@ -81,9 +179,7 @@ export function AuthScreen() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  leftIcon={
-                    <Mail size={22} color={COLORS.inputIcon} />
-                  }
+                  leftIcon={<Mail size={22} color={COLORS.inputIcon} />}
                 />
 
                 <CustomInput
@@ -91,9 +187,7 @@ export function AuthScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                  leftIcon={
-                    <LockKeyhole size={22} color={COLORS.inputIcon} />
-                  }
+                  leftIcon={<LockKeyhole size={22} color={COLORS.inputIcon} />}
                   rightIcon={
                     showPassword ? (
                       <EyeOff size={22} color={COLORS.inputIcon} />
@@ -122,32 +216,33 @@ export function AuthScreen() {
                   </View>
                 )}
 
-                {/* Main Submit Button */}
+                {errorMessage ? (
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                ) : null}
+                {successMessage ? (
+                  <Text style={styles.successText}>{successMessage}</Text>
+                ) : null}
+
                 <PrimaryButton
                   title={isLogin ? "Log in" : "Sign up"}
                   onPress={handleMainSubmit}
                   buttonStyle={styles.submitButtonMargin}
                 />
 
-                {/* Divider */}
                 <View style={styles.dividerContainer}>
                   <View style={styles.dividerLine} />
                   <Text style={styles.dividerText}>or</Text>
                   <View style={styles.dividerLine} />
                 </View>
 
-                {/* Social Login Buttons */}
                 <SocialButton
                   variant="google"
                   title={isLogin ? "Continue with Google" : "Sign up with Google"}
                   style={styles.socialButtonMargin}
                 />
-
                 <SocialButton
                   variant="facebook"
-                  title={
-                    isLogin ? "Continue with Facebook" : "Sign up with Facebook"
-                  }
+                  title={isLogin ? "Continue with Facebook" : "Sign up with Facebook"}
                 />
               </View>
             )}
@@ -194,6 +289,20 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semiBold,
     color: COLORS.primary,
     fontSize: 13,
+  },
+  errorText: {
+    fontFamily: FONTS.regular,
+    color: "red",
+    fontSize: 13,
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  successText: {
+    fontFamily: FONTS.regular,
+    color: "green",
+    fontSize: 13,
+    marginBottom: 10,
+    textAlign: "center",
   },
   submitButtonMargin: {
     marginTop: 10,

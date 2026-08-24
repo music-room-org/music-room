@@ -16,6 +16,7 @@ export interface PrimaryButtonProps extends TouchableOpacityProps {
   textStyle?: TextStyle;
 }
 
+
 export function PrimaryButton({
   title,
   onPress,

@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Linking from 'expo-linking';
+
 import {
   useFonts,
   Fredoka_400Regular,

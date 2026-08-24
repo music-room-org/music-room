@@ -7,3 +7,4 @@ export * from "./auth/AuthTabs";
 export * from "./auth/ForgotPasswordView";
 export * from "./auth/EmailCheckView";
 export * from "./auth/BackToLoginButton";
+export * from "./auth/ResetPasswordView";
