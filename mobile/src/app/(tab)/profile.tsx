@@ -51,6 +51,7 @@ export default function Profile() {
 							icon={<UserPlus color='black' />}
 						/>
 					</View>
+					<View style={styles.divider}></View>
 
 					<View style={styles.sectionHeader}>
 						<Text style={styles.sectionTitle}>Recent activity</Text>
@@ -78,6 +79,7 @@ export default function Profile() {
 						/>
 					</View>
 
+					<View style={styles.divider}></View>
 					<View style={styles.sectionHeader}>
 						<Text style={styles.sectionTitle}>Friends</Text>
 						<ChevronRight />
@@ -87,7 +89,7 @@ export default function Profile() {
 				<ScrollView
 					horizontal
 					showsHorizontalScrollIndicator={false}
-					style={styles.friendsScroll}
+					contentContainerStyle={styles.friendsScroll}
 				>
 					<FriendAvatar
 						name="Joëlle"
@@ -102,7 +104,8 @@ export default function Profile() {
 						bgColor="#FBECEE"
 					/>
 					<FriendAvatar
-						isMore
+						isMore={true}
+						name=""
 						moreCount="+21"
 						bgColor="#FDF0DF"
 					/>
@@ -115,7 +118,7 @@ export default function Profile() {
 const styles = StyleSheet.create({
 	safeArea: {
 		flex: 1,
-		backgroundColor: COLORS.background,
+		backgroundColor: "#ffffff",
 	},
 
 	scrollContent: {
@@ -175,7 +178,6 @@ const styles = StyleSheet.create({
 
 	buttonsContainer: {
 		paddingHorizontal: 24,
-		marginBottom: 32,
 	},
 
 	sectionHeader: {
@@ -193,10 +195,18 @@ const styles = StyleSheet.create({
 
 	activityContainer: {
 		paddingHorizontal: 24,
-		marginBottom: 32,
 	},
 
 	friendsScroll: {
 		paddingHorizontal: 24,
+		marginLeft: 25,
+		flexGrow: 1,
+		justifyContent: 'space-between'
 	},
+	divider: {
+		height: 1,
+		backgroundColor: COLORS.cardBorder,
+		marginHorizontal: 24,
+		marginVertical: 12
+	}
 });

@@ -14,8 +14,8 @@ export function FriendAvatar({ name, bgColor, isMore, moreCount }: FriendAvatarP
         <View style={styles.container}>
             <View style={[styles.circle, { backgroundColor: bgColor }]}>
                 {isMore ? <Text style={styles.moreText}>{moreCount}</Text> : <User color='#000' />}
-                <Text style={styles.nameText}>{name}</Text>
             </View>
+            <Text style={styles.nameText}>{name}</Text>
         </View>
     )
 }

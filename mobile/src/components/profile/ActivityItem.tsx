@@ -11,7 +11,7 @@ interface ActivityItemProps {
 export function ActivityItem({ title, description, time, imageUrl }: ActivityItemProps) {
     return (
         <View style={styles.container}>
-            <Image style={styles.image}>{imageUrl}</Image>
+            <Image style={styles.image} source={{ uri: imageUrl }} />
             <View style={styles.textContainer}>
                 <Text style={styles.title}>{title}</Text>
                 <Text style={styles.desc}>{description}</Text>

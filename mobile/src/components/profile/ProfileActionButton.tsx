@@ -11,7 +11,7 @@ export function ProfileActionButton({ title, icon, isPrimary }: ProfileActionBut
 	return (
 		<TouchableOpacity style={[styles.button, isPrimary ? styles.primaryBg : styles.secondaryBg]}>
 			{icon}
-			<Text style={[styles.button, isPrimary ? styles.primaryText : styles.secondaryText]}>{title}</Text>
+			<Text style={[styles.text, isPrimary ? styles.primaryText : styles.secondaryText]}>{title}</Text>
 		</TouchableOpacity>
 	)
 }
@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
 		backgroundColor: '#FDF0DF'
 	},
 	secondaryBg: {
-		backgroundColor: '#F5F5F5'
+		backgroundColor: COLORS.button_secondary
 	},
 	text: {
 		fontFamily: FONTS.semiBold,
@@ -40,6 +40,6 @@ const styles = StyleSheet.create({
 		color: COLORS.primary
 	},
 	secondaryText: {
-		color: COLORS.secondary
+		color: COLORS.textPrimary
 	}
 })
