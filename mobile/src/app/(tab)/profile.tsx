@@ -1,22 +1,14 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-	ChevronLeft,
-	Camera,
-	Pencil,
-	UserPlus,
-	ChevronRight,
-} from "lucide-react-native";
-
+import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
-import {
-	ProfileStat,
-	ProfileActionButton,
-	ActivityItem,
-	FriendAvatar,
-} from "@/components";
+import { ProfileStat, ProfileActionButton, ActivityItem, FriendAvatar } from "@/components";
 
 export default function Profile() {
+
+	const router = useRouter();
+
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<ScrollView style={styles.scrollContent}>
@@ -44,6 +36,7 @@ export default function Profile() {
 							title="Modify my profile"
 							isPrimary={true}
 							icon={<Pencil color={COLORS.primary} />}
+							onPress={() => router.push("/edit-profile")}
 						/>
 						<ProfileActionButton
 							title="Add new friends"
