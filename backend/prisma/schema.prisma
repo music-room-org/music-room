@@ -30,6 +30,7 @@ model User {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   playlists Playlist[]
+  votes Vote[]
 
   // Public information
   displayName String?
@@ -47,6 +48,8 @@ model User {
 
   // Music preferences
   favoriteGenres String[]
+
+
 }
 
 model Playlist {
@@ -72,5 +75,22 @@ model Track {
   // Relation : à quelle playlist appartient ce morceau
   playlist   Playlist @relation(fields: [playlistId], references: [id])
   playlistId String
+  votes Vote[]
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Qui vote
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // Pour quel morceau
+  track   Track  @relation(fields: [trackId], references: [id])
+  trackId String
+
+  // Un même user ne peut voter qu'une fois par morceau
+  @@unique([userId, trackId])
 
 }
