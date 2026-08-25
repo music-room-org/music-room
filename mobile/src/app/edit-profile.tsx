@@ -1,12 +1,14 @@
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, Camera, ChevronRight, Lock } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
-import { CustomInput, PrimaryButton } from "@/components";
+import { CustomInput, PrimaryButton, ChangePasswordModal } from "@/components";
+import { useState } from "react";
 
 export default function EditProfile() {
 	const router = useRouter();
+	const [isPasswordModalVisible, setPasswordModalVisible] = useState(false);
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -40,11 +42,20 @@ export default function EditProfile() {
 
 					<View style={styles.fieldContainer}>
 						<Text style={styles.label}>Password</Text>
-							<CustomInput
-								placeholder="••••••••••••••"
-								rightIcon={<ChevronRight color="black" size={20} />}
-							/>
+						<TouchableOpacity 
+							style={styles.passwordTrigger}
+							onPress={() => setPasswordModalVisible(true)}
+						>
+							<Lock size={20} color={COLORS.textPrimary} />
+							<Text style={styles.passwordTriggerText}>Change my password</Text>
+							<ChevronRight size={20} color={COLORS.textPrimary} />
+						</TouchableOpacity>
 					</View>
+
+					<ChangePasswordModal 
+						visible={isPasswordModalVisible} 
+						onClose={() => setPasswordModalVisible(false)} 
+					/>
 
 					<View style={styles.saveButtonContainer}>
 						<PrimaryButton
@@ -119,4 +130,21 @@ const styles = StyleSheet.create({
 		height: 150,
 		resizeMode: "contain",
 	},
+	passwordTrigger: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: COLORS.white,
+		borderWidth: 1,
+		borderColor: COLORS.inputBorder,
+		borderRadius: 30,
+		height: 56,
+		paddingHorizontal: 16,
+	},
+	passwordTriggerText: {
+		flex: 1,
+		fontFamily: FONTS.semiBold,
+		fontSize: 15,
+		color: COLORS.textPrimary,
+		marginLeft: 12,
+	}
 });

@@ -19,3 +19,4 @@ export * from "./profile/ActivityItem";
 export * from "./profile/FriendAvatar";
 export * from "./profile/ProfileActionButton";
 export * from "./profile/ProfileStat";
+export * from "./profile/ChangePasswordModal";
