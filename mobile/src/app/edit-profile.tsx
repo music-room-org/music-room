@@ -1,14 +1,49 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Camera, ChevronRight, Lock } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { CustomInput, PrimaryButton, ChangePasswordModal } from "@/components";
+import * as SecureStore from 'expo-secure-store';
 import { useState } from "react";
 
 export default function EditProfile() {
 	const router = useRouter();
-	const [isPasswordModalVisible, setPasswordModalVisible] = useState(false);
+
+	const [displayName, setDisplayName] = useState("");
+	const [email, setEmail] = useState("");
+	const [isModalVisible, setModalVisible] = useState(false);
+	
+	const handleSaveProfile = async () => {
+		const token = await SecureStore.getItemAsync("userToken");
+		await fetch("http://localhost:3000/auth/profil", {
+			method: "PATCH",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({
+				displayName,
+				email,
+			}),
+		});
+	};
+
+	const handleSavePassword = async (currentPass: string, newPass: string) => {
+		const token = await SecureStore.getItemAsync("userToken");
+		await fetch("http://localhost:3000/auth/profil", {
+			method: "PATCH",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({
+				currentPassword: currentPass,
+				newPassword: newPass,
+			}),
+		});
+		setModalVisible(false);
+	};
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -32,34 +67,54 @@ export default function EditProfile() {
 				<View style={styles.formSection}>
 					<View style={styles.fieldContainer}>
 						<Text style={styles.label}>Username</Text>
-						<CustomInput placeholder="Faustoche" />
+
+						<CustomInput
+							placeholder="Faustoche"
+							value={displayName}
+							onChangeText={setDisplayName}
+						/>
 					</View>
 
 					<View style={styles.fieldContainer}>
 						<Text style={styles.label}>Email</Text>
-						<CustomInput placeholder="faustoche@gmail.com" />
+
+						<CustomInput
+							placeholder="faustoche@gmail.com"
+							value={email}
+							onChangeText={setEmail}
+						/>
 					</View>
 
 					<View style={styles.fieldContainer}>
 						<Text style={styles.label}>Password</Text>
-						<TouchableOpacity 
+
+						<TouchableOpacity
 							style={styles.passwordTrigger}
-							onPress={() => setPasswordModalVisible(true)}
+							onPress={() => setModalVisible(true)}
 						>
 							<Lock size={20} color={COLORS.textPrimary} />
-							<Text style={styles.passwordTriggerText}>Change my password</Text>
-							<ChevronRight size={20} color={COLORS.textPrimary} />
+
+							<Text style={styles.passwordTriggerText}>
+								Change my password
+							</Text>
+
+							<ChevronRight
+								size={20}
+								color={COLORS.textPrimary}
+							/>
 						</TouchableOpacity>
 					</View>
 
-					<ChangePasswordModal 
-						visible={isPasswordModalVisible} 
-						onClose={() => setPasswordModalVisible(false)} 
+					<ChangePasswordModal
+						visible={isModalVisible}
+						onClose={() => setModalVisible(false)}
+						onSubmit={handleSavePassword}
 					/>
 
 					<View style={styles.saveButtonContainer}>
 						<PrimaryButton
 							title="Save modifications"
+							onPress={handleSaveProfile}
 							buttonStyle={{ backgroundColor: "#FDF0DF" }}
 							textStyle={{ color: COLORS.primary }}
 						/>
@@ -75,23 +130,27 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: COLORS.background,
 	},
+
 	header: {
 		paddingHorizontal: 24,
 		paddingTop: 20,
 		flexDirection: "row",
 	},
+
 	avatarContainer: {
 		alignSelf: "center",
 		alignItems: "center",
 		marginTop: 16,
 		marginBottom: 40,
 	},
+
 	avatarCircle: {
 		width: 90,
 		height: 90,
 		borderRadius: 45,
 		backgroundColor: COLORS.secondary,
 	},
+
 	cameraBadge: {
 		position: "absolute",
 		bottom: 0,
@@ -102,27 +161,33 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: COLORS.cardBorder,
 	},
+
 	changePhotoText: {
 		marginTop: 12,
 		fontFamily: FONTS.semiBold,
 		fontSize: 13,
 		textDecorationLine: "underline",
 	},
+
 	formSection: {
 		paddingHorizontal: 24,
 	},
+
 	fieldContainer: {
 		marginBottom: 20,
 	},
+
 	label: {
 		fontFamily: FONTS.semiBold,
 		fontSize: 14,
 		marginBottom: 8,
 		color: COLORS.textPrimary,
 	},
+
 	saveButtonContainer: {
 		marginTop: 20,
 	},
+
 	illustration: {
 		alignSelf: "center",
 		marginTop: 40,
@@ -130,9 +195,10 @@ const styles = StyleSheet.create({
 		height: 150,
 		resizeMode: "contain",
 	},
+
 	passwordTrigger: {
-		flexDirection: 'row',
-		alignItems: 'center',
+		flexDirection: "row",
+		alignItems: "center",
 		backgroundColor: COLORS.white,
 		borderWidth: 1,
 		borderColor: COLORS.inputBorder,
@@ -140,11 +206,12 @@ const styles = StyleSheet.create({
 		height: 56,
 		paddingHorizontal: 16,
 	},
+
 	passwordTriggerText: {
 		flex: 1,
 		fontFamily: FONTS.semiBold,
 		fontSize: 15,
 		color: COLORS.textPrimary,
 		marginLeft: 12,
-	}
+	},
 });

@@ -1,331 +1,336 @@
 import React, { useState, useEffect } from "react";
 import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+	SafeAreaView,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TouchableOpacity,
+	View,
 } from "react-native";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react-native";
 import * as Linking from 'expo-linking';
 import {
-  AuthHeader,
-  AuthMode,
-  AuthTabs,
-  CustomInput,
-  EmailCheckView,
-  ForgotPasswordView,
-  FormCard,
-  PrimaryButton,
-  SocialButton,
-  ResetPasswordView,
+	AuthHeader,
+	AuthMode,
+	AuthTabs,
+	CustomInput,
+	EmailCheckView,
+	ForgotPasswordView,
+	FormCard,
+	PrimaryButton,
+	SocialButton,
+	ResetPasswordView,
 } from "@/components";
 
 import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/fonts";
+import { useRouter } from "expo-router";
+import * as SecureStore from 'expo-secure-store';
 
 export function AuthScreen() {
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  
-  const [resetToken, setResetToken] = useState("");
+	const router = useRouter();
 
-  const isLogin = mode === "login";
-  const API_URL = "http://localhost:3000/auth";
+	const [mode, setMode] = useState<AuthMode>("login");
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
+	const [errorMessage, setErrorMessage] = useState("");
+	const [successMessage, setSuccessMessage] = useState("");
+	
+	const [resetToken, setResetToken] = useState("");
 
-  // Écoute des liens entrants (Deep Linking)
-  useEffect(() => {
-    const handleDeepLink = (event: { url: string }) => {
-      const parsed = Linking.parse(event.url);
-      
-      // On récupère action, token et email depuis les paramètres
-      const { action, token, email: urlEmail } = parsed.queryParams || {};
-      
-      if (action === "reset-password" && token && urlEmail) {
-        setResetToken(token as string);
-        setEmail(urlEmail as string);
-        setMode("reset_password"); // Bascule l'écran sur ResetPasswordView
-      }
-    };
+	const isLogin = mode === "login";
+	const API_URL = "http://localhost:3000/auth";
 
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink({ url });
-    });
+	// Écoute des liens entrants (Deep Linking)
+	useEffect(() => {
+		const handleDeepLink = (event: { url: string }) => {
+			const parsed = Linking.parse(event.url);
+			
+			// On récupère action, token et email depuis les paramètres
+			const { action, token, email: urlEmail } = parsed.queryParams || {};
+			
+			if (action === "reset-password" && token && urlEmail) {
+				setResetToken(token as string);
+				setEmail(urlEmail as string);
+				setMode("reset_password"); // Bascule l'écran sur ResetPasswordView
+			}
+		};
 
-    const subscription = Linking.addEventListener("url", handleDeepLink);
-    return () => subscription.remove();
-  }, []);
+		Linking.getInitialURL().then((url) => {
+			if (url) handleDeepLink({ url });
+		});
 
-  const handleForgotPasswordSubmit = async (targetEmail: string) => {
-    if (!targetEmail.trim()) return;
-    try {
-      const response = await fetch(`${API_URL}/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail }),
-      });
+		const subscription = Linking.addEventListener("url", handleDeepLink);
+		return () => subscription.remove();
+	}, []);
 
-      if (response.ok) {
-        setEmail(targetEmail);
-        setMode("email_check");
-      } else {
-        const data = await response.json();
-        setErrorMessage(data.message || "Erreur lors de l'envoi de l'e-mail");
-      }
-    } catch (error) {
-      setErrorMessage("Impossible de joindre le serveur.");
-    }
-  };
+	const handleForgotPasswordSubmit = async (targetEmail: string) => {
+		if (!targetEmail.trim()) return;
+		try {
+			const response = await fetch(`${API_URL}/forgot-password`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: targetEmail }),
+			});
 
-  const handleResetPasswordSubmit = async (newPassword: string) => {
-    try {
-      const response = await fetch(`${API_URL}/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: email, 
-          token: resetToken, 
-          newPassword: newPassword 
-        }),
-      });
+			if (response.ok) {
+				setEmail(targetEmail);
+				setMode("email_check");
+			} else {
+				const data = await response.json();
+				setErrorMessage(data.message || "Erreur lors de l'envoi de l'e-mail");
+			}
+		} catch (error) {
+			setErrorMessage("Impossible de joindre le serveur.");
+		}
+	};
 
-      if (response.ok) {
-        setSuccessMessage("Mot de passe mis à jour ! Vous pouvez vous connecter.");
-        setMode("login");
-      } else {
-        const data = await response.json();
-        alert(data.message || "Erreur lors de la réinitialisation");
-      }
-    } catch (error) {
-      alert("Impossible de joindre le serveur.");
-    }
-  };
+	const handleResetPasswordSubmit = async (newPassword: string) => {
+		try {
+			const response = await fetch(`${API_URL}/reset-password`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ 
+					email: email, 
+					token: resetToken, 
+					newPassword: newPassword 
+				}),
+			});
 
-  const handleMainSubmit = async () => {
-    setErrorMessage("");
-    setSuccessMessage("");
-    try {
-      if (mode === "signup") {
-        const response = await fetch(`${API_URL}/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        if (response.ok) {
-          setMode("email_check");
-        } else {
-          const data = await response.json();
-          setErrorMessage(data.message || "Error while signing up");
-        }
-      } else if (mode === "login") {
-        const response = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Login successed, token:", data.token);
-          setSuccessMessage("Connexion réussie");
-        } else {
-          const data = await response.json();
-          setErrorMessage(data.message || "Error while login in");
-        }
-      }
-    } catch (error) {
-      console.log("Communication error with the server:", error);
-    }
-  };
+			if (response.ok) {
+				setSuccessMessage("Mot de passe mis à jour ! Vous pouvez vous connecter.");
+				setMode("login");
+			} else {
+				const data = await response.json();
+				alert(data.message || "Erreur lors de la réinitialisation");
+			}
+		} catch (error) {
+			alert("Impossible de joindre le serveur.");
+		}
+	};
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        scrollEnabled={false}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <AuthHeader />
-        <View style={styles.cardWrapper}>
-          <FormCard>
-            {mode !== "reset_password" && <AuthTabs mode={mode} onModeChange={setMode} />}
+	const handleMainSubmit = async () => {
+		setErrorMessage("");
+		setSuccessMessage("");
+		try {
+			if (mode === "signup") {
+				const response = await fetch(`${API_URL}/register`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ email, password }),
+				});
+				if (response.ok) {
+					setMode("email_check");
+				} else {
+					const data = await response.json();
+					setErrorMessage(data.message || "Error while signing up");
+				}
+			} else if (mode === "login") {
+				const response = await fetch(`${API_URL}/login`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ email, password }),
+				});
+				if (response.ok) {
+					const data = await response.json();
+					await SecureStore.setItemAsync("userToken", data.token);
+					setSuccessMessage("Connexion réussie");
+					router.replace("/(tab)");
+				} else {
+					const data = await response.json();
+					setErrorMessage(data.message || "Error while login in");
+				}
+			}
+		} catch (error) {
+			console.log("Communication error with the server:", error);
+		}
+	};
 
-            {mode === "reset_password" ? (
-              <ResetPasswordView
-                onSubmit={handleResetPasswordSubmit}
-                onBackToLogin={() => setMode("login")}
-              />
-            ) : mode === "forgot_password" ? (
-              <ForgotPasswordView
-                initialEmail={email}
-                onSubmit={handleForgotPasswordSubmit}
-                onBackToLogin={() => setMode("login")}
-              />
-            ) : mode === "email_check" ? (
-              <EmailCheckView
-                email={email}
-                onResendEmail={() => {}}
-                onBackToLogin={() => setMode("login")}
-              />
-            ) : (
-              <View style={styles.formContainer}>
-                <CustomInput
-                  placeholder="john.doe@email.com"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  leftIcon={<Mail size={22} color={COLORS.inputIcon} />}
-                />
+	return (
+		<SafeAreaView style={styles.safeArea}>
+			<ScrollView
+				scrollEnabled={false}
+				contentContainerStyle={styles.scrollContent}
+				showsVerticalScrollIndicator={false}
+				keyboardShouldPersistTaps="handled"
+			>
+				<AuthHeader />
+				<View style={styles.cardWrapper}>
+					<FormCard>
+						{mode !== "reset_password" && <AuthTabs mode={mode} onModeChange={setMode} />}
 
-                <CustomInput
-                  placeholder="Enter password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  leftIcon={<LockKeyhole size={22} color={COLORS.inputIcon} />}
-                  rightIcon={
-                    showPassword ? (
-                      <EyeOff size={22} color={COLORS.inputIcon} />
-                    ) : (
-                      <Eye size={22} color={COLORS.inputIcon} />
-                    )
-                  }
-                  onRightIconPress={() => setShowPassword(!showPassword)}
-                />
+						{mode === "reset_password" ? (
+							<ResetPasswordView
+								onSubmit={handleResetPasswordSubmit}
+								onBackToLogin={() => setMode("login")}
+							/>
+						) : mode === "forgot_password" ? (
+							<ForgotPasswordView
+								initialEmail={email}
+								onSubmit={handleForgotPasswordSubmit}
+								onBackToLogin={() => setMode("login")}
+							/>
+						) : mode === "email_check" ? (
+							<EmailCheckView
+								email={email}
+								onResendEmail={() => {}}
+								onBackToLogin={() => setMode("login")}
+							/>
+						) : (
+							<View style={styles.formContainer}>
+								<CustomInput
+									placeholder="john.doe@email.com"
+									value={email}
+									onChangeText={setEmail}
+									keyboardType="email-address"
+									autoCapitalize="none"
+									leftIcon={<Mail size={22} color={COLORS.inputIcon} />}
+								/>
 
-                {isLogin ? (
-                  <TouchableOpacity
-                    style={styles.forgotPasswordContainer}
-                    onPress={() => setMode("forgot_password")}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.forgotPasswordText}>
-                      Forgot your password?
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.passwordHintContainer}>
-                    <Text style={styles.passwordHintText}>
-                      Min 8 chars., 1 upp., 1 low., 1 num.
-                    </Text>
-                  </View>
-                )}
+								<CustomInput
+									placeholder="Enter password"
+									value={password}
+									onChangeText={setPassword}
+									secureTextEntry={!showPassword}
+									leftIcon={<LockKeyhole size={22} color={COLORS.inputIcon} />}
+									rightIcon={
+										showPassword ? (
+											<EyeOff size={22} color={COLORS.inputIcon} />
+										) : (
+											<Eye size={22} color={COLORS.inputIcon} />
+										)
+									}
+									onRightIconPress={() => setShowPassword(!showPassword)}
+								/>
 
-                {errorMessage ? (
-                  <Text style={styles.errorText}>{errorMessage}</Text>
-                ) : null}
-                {successMessage ? (
-                  <Text style={styles.successText}>{successMessage}</Text>
-                ) : null}
+								{isLogin ? (
+									<TouchableOpacity
+										style={styles.forgotPasswordContainer}
+										onPress={() => setMode("forgot_password")}
+										activeOpacity={0.7}
+									>
+										<Text style={styles.forgotPasswordText}>
+											Forgot your password?
+										</Text>
+									</TouchableOpacity>
+								) : (
+									<View style={styles.passwordHintContainer}>
+										<Text style={styles.passwordHintText}>
+											Min 8 chars., 1 upp., 1 low., 1 num.
+										</Text>
+									</View>
+								)}
 
-                <PrimaryButton
-                  title={isLogin ? "Log in" : "Sign up"}
-                  onPress={handleMainSubmit}
-                  buttonStyle={styles.submitButtonMargin}
-                />
+								{errorMessage ? (
+									<Text style={styles.errorText}>{errorMessage}</Text>
+								) : null}
+								{successMessage ? (
+									<Text style={styles.successText}>{successMessage}</Text>
+								) : null}
 
-                <View style={styles.dividerContainer}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or</Text>
-                  <View style={styles.dividerLine} />
-                </View>
+								<PrimaryButton
+									title={isLogin ? "Log in" : "Sign up"}
+									onPress={handleMainSubmit}
+									buttonStyle={styles.submitButtonMargin}
+								/>
 
-                <SocialButton
-                  variant="google"
-                  title={isLogin ? "Continue with Google" : "Sign up with Google"}
-                  style={styles.socialButtonMargin}
-                />
-                <SocialButton
-                  variant="facebook"
-                  title={isLogin ? "Continue with Facebook" : "Sign up with Facebook"}
-                />
-              </View>
-            )}
-          </FormCard>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+								<View style={styles.dividerContainer}>
+									<View style={styles.dividerLine} />
+									<Text style={styles.dividerText}>or</Text>
+									<View style={styles.dividerLine} />
+								</View>
+
+								<SocialButton
+									variant="google"
+									title={isLogin ? "Continue with Google" : "Sign up with Google"}
+									style={styles.socialButtonMargin}
+								/>
+								<SocialButton
+									variant="facebook"
+									title={isLogin ? "Continue with Facebook" : "Sign up with Facebook"}
+								/>
+							</View>
+						)}
+					</FormCard>
+				</View>
+			</ScrollView>
+		</SafeAreaView>
+	);
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 30,
-  },
-  cardWrapper: {
-    marginTop: 10,
-    paddingHorizontal: 18,
-  },
-  formContainer: {
-    marginTop: 6,
-  },
-  passwordHintContainer: {
-    alignSelf: "flex-end",
-    marginTop: 6,
-    marginBottom: 16,
-  },
-  passwordHintText: {
-    fontFamily: FONTS.regular,
-    fontSize: 13,
-    color: COLORS.textMuted,
-    textAlign: "right",
-  },
-  forgotPasswordContainer: {
-    alignSelf: "flex-end",
-    marginTop: 6,
-    marginBottom: 16,
-  },
-  forgotPasswordText: {
-    fontFamily: FONTS.semiBold,
-    color: COLORS.primary,
-    fontSize: 13,
-  },
-  errorText: {
-    fontFamily: FONTS.regular,
-    color: "red",
-    fontSize: 13,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  successText: {
-    fontFamily: FONTS.regular,
-    color: "green",
-    fontSize: 13,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  submitButtonMargin: {
-    marginTop: 10,
-    marginBottom: 22,
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 14,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.divider,
-  },
-  dividerText: {
-    fontFamily: FONTS.regular,
-    marginHorizontal: 14,
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
-  socialButtonMargin: {
-    marginBottom: 12,
-  },
+	safeArea: {
+		flex: 1,
+		backgroundColor: COLORS.background,
+	},
+	scrollContent: {
+		flexGrow: 1,
+		paddingBottom: 30,
+	},
+	cardWrapper: {
+		marginTop: 10,
+		paddingHorizontal: 18,
+	},
+	formContainer: {
+		marginTop: 6,
+	},
+	passwordHintContainer: {
+		alignSelf: "flex-end",
+		marginTop: 6,
+		marginBottom: 16,
+	},
+	passwordHintText: {
+		fontFamily: FONTS.regular,
+		fontSize: 13,
+		color: COLORS.textMuted,
+		textAlign: "right",
+	},
+	forgotPasswordContainer: {
+		alignSelf: "flex-end",
+		marginTop: 6,
+		marginBottom: 16,
+	},
+	forgotPasswordText: {
+		fontFamily: FONTS.semiBold,
+		color: COLORS.primary,
+		fontSize: 13,
+	},
+	errorText: {
+		fontFamily: FONTS.regular,
+		color: "red",
+		fontSize: 13,
+		marginBottom: 10,
+		textAlign: "center",
+	},
+	successText: {
+		fontFamily: FONTS.regular,
+		color: "green",
+		fontSize: 13,
+		marginBottom: 10,
+		textAlign: "center",
+	},
+	submitButtonMargin: {
+		marginTop: 10,
+		marginBottom: 22,
+	},
+	dividerContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginVertical: 14,
+	},
+	dividerLine: {
+		flex: 1,
+		height: 1,
+		backgroundColor: COLORS.divider,
+	},
+	dividerText: {
+		fontFamily: FONTS.regular,
+		marginHorizontal: 14,
+		color: COLORS.textMuted,
+		fontSize: 14,
+	},
+	socialButtonMargin: {
+		marginBottom: 12,
+	},
 });
