@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { HealthController } from './health.controller';
 import { AuthController } from './controller';
 import { PlaylistController } from './playlist.controller';
+import { TrackController } from './track.controller';
 
 @Module({
   imports: [],
@@ -12,6 +13,7 @@ import { PlaylistController } from './playlist.controller';
     HealthController,
     AuthController,
     PlaylistController,
+    TrackController,
   ],
   providers: [AppService],
 })
