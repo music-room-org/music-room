@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import {
-	SafeAreaView,
 	ScrollView,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
 	View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react-native";
 import * as Linking from 'expo-linking';
 import {
@@ -26,6 +26,10 @@ import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/fonts";
 import { useRouter } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export function AuthScreen() {
 	const router = useRouter();
@@ -36,11 +40,16 @@ export function AuthScreen() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
-	
 	const [resetToken, setResetToken] = useState("");
 
+	const [request, response, promptAsync] = Google.useAuthRequest({
+		webClientId: "119307991318-6q08olkvff98ol795k125ff5boh9ng8l.apps.googleusercontent.com",
+		iosClientId: "119307991318-0drk1nlrgs2q2iq1o8of1r4v1cnivin9.apps.googleusercontent.com",
+		redirectUri: "com.googleusercontent.apps.119307991318-0drk1nlrgs2q2iq1o8of1r4v1cnivin9:/oauth2redirect/google"
+	});
+
 	const isLogin = mode === "login";
-	const API_URL = "http://localhost:3000/auth";
+	const API_URL = "http://192.168.1.29:3000/auth";
 
 	// Écoute des liens entrants (Deep Linking)
 	useEffect(() => {
@@ -64,6 +73,36 @@ export function AuthScreen() {
 		const subscription = Linking.addEventListener("url", handleDeepLink);
 		return () => subscription.remove();
 	}, []);
+
+	useEffect(() => {
+		if (response?.type === "success" && response.authentication?.idToken) {
+			handleGoogleLogin(response.authentication?.idToken);
+		}
+	}, [response]);
+
+	const handleGoogleLogin = async (idToken: string) => {
+		try {
+			const response = await fetch(`${API_URL}/google`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					token: idToken,
+				}),
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				await SecureStore.setItemAsync("userToken", data.token);
+				router.replace("/(tab)");
+			} else {
+				alert ("Network error: connection refused");
+			}
+		} catch (error) {
+			console.log("Google login error:", error);
+		}
+	}
 
 	const handleForgotPasswordSubmit = async (targetEmail: string) => {
 		if (!targetEmail.trim()) return;
@@ -243,12 +282,9 @@ export function AuthScreen() {
 
 								<SocialButton
 									variant="google"
+									onPress={() => promptAsync()}
 									title={isLogin ? "Continue with Google" : "Sign up with Google"}
 									style={styles.socialButtonMargin}
-								/>
-								<SocialButton
-									variant="facebook"
-									title={isLogin ? "Continue with Facebook" : "Sign up with Facebook"}
 								/>
 							</View>
 						)}
