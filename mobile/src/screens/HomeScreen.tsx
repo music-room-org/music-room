@@ -1,11 +1,41 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { CurrentlyPlayingCard, PlaylistCard } from "@/components";
 import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/fonts";
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from "react-native";
 
 export function HomeScreen() {
+
+	const [username, setUsername] = useState("");
+
+	useEffect(() => {
+		const fetchProfile = async () => {
+			try {
+				const token = await SecureStore.getItemAsync('userToken');
+				const apiUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000/auth/profil' : 'http://localhost:3000/auth/profil';
+				const response = await fetch(
+					apiUrl,
+					{
+						method: 'GET',
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					}
+				);
+
+				const data = await response.json();
+				setUsername(data.username);
+			} catch (error) {
+				console.error(error);
+			}
+		};
+
+		fetchProfile();
+	}, []);
+
 	const mockFriendsPlaying = [
 		{
 			id: '1',
@@ -35,7 +65,7 @@ export function HomeScreen() {
 			<ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 				
 				<View style={styles.headerContainer}>
-					<Text style={styles.mainTitle}>Hello user</Text>
+					<Text style={styles.mainTitle}>Hello {username}</Text>
 					<Text style={styles.subTitle}>Ready to share some music?</Text>
 					<View style={styles.yellowLine} />
 				</View>

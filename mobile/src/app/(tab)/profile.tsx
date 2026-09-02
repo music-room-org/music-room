@@ -4,10 +4,37 @@ import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight } from "lucide-reac
 import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { ProfileStat, ProfileActionButton, ActivityItem, FriendAvatar } from "@/components";
+import { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
 
 export default function Profile() {
 
 	const router = useRouter();
+		const [username, setUsername] = useState("");
+		
+		useEffect(() => {
+			const fetchProfile = async () => {
+				try {
+					const token = await SecureStore.getItemAsync('userToken');
+					const response = await fetch(
+						'http://localhost:3000/auth/profil',
+						{
+							method: 'GET',
+							headers: {
+								Authorization: `Bearer ${token}`,
+							},
+						}
+					);
+	
+					const data = await response.json();
+					setUsername(data.username);
+				} catch (error) {
+					console.error(error);
+				}
+			};
+	
+			fetchProfile();
+		}, []);
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -22,8 +49,7 @@ export default function Profile() {
 						</View>
 					</View>
 
-					<Text style={styles.nameTitle}>Faustoche</Text>
-					<Text style={styles.handleText}>@faustoche</Text>
+					<Text style={styles.handleText}>@{username}</Text>
 
 					<View style={styles.statsRow}>
 						<ProfileStat value="46" label="playlists" />

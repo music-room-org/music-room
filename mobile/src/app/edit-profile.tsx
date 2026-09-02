@@ -5,7 +5,8 @@ import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { CustomInput, PrimaryButton, ChangePasswordModal } from "@/components";
 import * as SecureStore from 'expo-secure-store';
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 
 export default function EditProfile() {
 	const router = useRouter();
@@ -13,6 +14,33 @@ export default function EditProfile() {
 	const [displayName, setDisplayName] = useState("");
 	const [email, setEmail] = useState("");
 	const [isModalVisible, setModalVisible] = useState(false);
+
+	const [username, setUsername] = useState("");
+	
+	useEffect(() => {
+		const fetchProfile = async () => {
+			try {
+				const token = await SecureStore.getItemAsync('userToken');
+				const response = await fetch(
+					'http://localhost:3000/auth/profil',
+					{
+						method: 'GET',
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					}
+				);
+
+				const data = await response.json();
+				setUsername(data.username);
+				setEmail(data.email);
+			} catch (error) {
+				console.error(error);
+			}
+		};
+
+		fetchProfile();
+	}, []);
 	
 	const handleSaveProfile = async () => {
 		const token = await SecureStore.getItemAsync("userToken");
@@ -70,8 +98,8 @@ export default function EditProfile() {
 
 						<CustomInput
 							placeholder="Faustoche"
-							value={displayName}
-							onChangeText={setDisplayName}
+							value={username}
+							onChangeText={setUsername}
 						/>
 					</View>
 

@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react-native";
 import * as Linking from 'expo-linking';
@@ -28,6 +22,7 @@ import { useRouter } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
+import { Platform } from "react-native";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -41,6 +36,7 @@ export function AuthScreen() {
 	const [errorMessage, setErrorMessage] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
 	const [resetToken, setResetToken] = useState("");
+	const [username, setUsername] = useState("");
 
 	const [request, response, promptAsync] = Google.useAuthRequest({
 		webClientId: "119307991318-6q08olkvff98ol795k125ff5boh9ng8l.apps.googleusercontent.com",
@@ -49,7 +45,7 @@ export function AuthScreen() {
 	});
 
 	const isLogin = mode === "login";
-	const API_URL = "http://192.168.1.29:3000/auth";
+	const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000/auth' : 'http://localhost:3000/auth';
 
 	// Écoute des liens entrants (Deep Linking)
 	useEffect(() => {
@@ -157,7 +153,7 @@ export function AuthScreen() {
 				const response = await fetch(`${API_URL}/register`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ email, password }),
+					body: JSON.stringify({ email, password, username }),
 				});
 				if (response.ok) {
 					setMode("email_check");
@@ -218,6 +214,16 @@ export function AuthScreen() {
 							/>
 						) : (
 							<View style={styles.formContainer}>
+								{ !isLogin && (
+									<CustomInput
+										placeholder="user1234"
+										value={username}
+										onChangeText={setUsername}
+										autoCapitalize="none"
+										leftIcon={<Mail size={22} color={COLORS.inputIcon} />}
+									/>
+								)}
+
 								<CustomInput
 									placeholder="john.doe@email.com"
 									value={email}
