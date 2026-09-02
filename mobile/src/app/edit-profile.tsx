@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Camera, ChevronRight, Lock } from "lucide-react-native";
 import { useRouter } from "expo-router";
@@ -6,23 +6,25 @@ import { COLORS, FONTS } from "@/constants";
 import { CustomInput, PrimaryButton, ChangePasswordModal } from "@/components";
 import * as SecureStore from 'expo-secure-store';
 import { useState, useEffect } from "react";
+import * as ImagePicker from "expo-image-picker";
 
 
 export default function EditProfile() {
 	const router = useRouter();
 
-	const [displayName, setDisplayName] = useState("");
 	const [email, setEmail] = useState("");
 	const [isModalVisible, setModalVisible] = useState(false);
-
 	const [username, setUsername] = useState("");
+	const [profileImage, setProfileImage] = useState("");
+
+	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 	
 	useEffect(() => {
 		const fetchProfile = async () => {
 			try {
 				const token = await SecureStore.getItemAsync('userToken');
 				const response = await fetch(
-					'http://localhost:3000/auth/profil',
+					`${apiUrl}/auth/profil`,
 					{
 						method: 'GET',
 						headers: {
@@ -34,6 +36,7 @@ export default function EditProfile() {
 				const data = await response.json();
 				setUsername(data.username);
 				setEmail(data.email);
+				setProfileImage(data.profileImage)
 			} catch (error) {
 				console.error(error);
 			}
@@ -43,23 +46,41 @@ export default function EditProfile() {
 	}, []);
 	
 	const handleSaveProfile = async () => {
-		const token = await SecureStore.getItemAsync("userToken");
-		await fetch("http://localhost:3000/auth/profil", {
+		try {
+			const token = await SecureStore.getItemAsync("userToken");
+
+			const response = await fetch(`${apiUrl}/profile`, {
 			method: "PATCH",
 			headers: {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${token}`,
 			},
 			body: JSON.stringify({
-				displayName,
+				username,
 				email,
+				profileImage,
 			}),
-		});
+			});
+
+			const data = await response.json();
+
+			console.log("PATCH PROFILE:", response.status, data);
+
+			if (!response.ok) {
+			throw new Error(data.message || "Profile update failed");
+			}
+
+			alert("Profile updated!");
+			router.back();
+		} catch (error) {
+			console.error("ERROR UPDATE PROFILE:", error);
+			alert("Failed to update profile");
+		}
 	};
 
 	const handleSavePassword = async (currentPass: string, newPass: string) => {
 		const token = await SecureStore.getItemAsync("userToken");
-		await fetch("http://localhost:3000/auth/profil", {
+		await fetch(`${apiUrl}/profile`, {
 			method: "PATCH",
 			headers: {
 				"Content-Type": "application/json",
@@ -73,6 +94,21 @@ export default function EditProfile() {
 		setModalVisible(false);
 	};
 
+	const pickImage = async () => {
+		const result = await ImagePicker.launchImageLibraryAsync({
+			allowsEditing: true,
+			aspect: [1, 1],
+			quality: 1,
+			base64: true,
+		});
+
+		if (!result.canceled) {
+			setProfileImage(
+				`data:image/jpeg;base64,${result.assets[0].base64}`
+			);
+		}
+	}
+
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<ScrollView showsVerticalScrollIndicator={false}>
@@ -82,15 +118,26 @@ export default function EditProfile() {
 					</TouchableOpacity>
 				</View>
 
-				<View style={styles.avatarContainer}>
-					<View style={styles.avatarCircle}>
-						<View style={styles.cameraBadge}>
-							<Camera color={COLORS.primary} size={16} />
+				<TouchableOpacity onPress={() => pickImage()}>
+					<View style={styles.avatarContainer}>
+						<View style={styles.avatarCircle}>
+							{profileImage && (
+								<Image
+									source={{ uri: profileImage }}
+									style={{
+										width: "100%",
+										height: "100%",
+										borderRadius: 999,
+									}}
+								/>
+							)}
+
+							<View style={styles.cameraBadge}>
+								<Camera color={COLORS.primary} size={16} />
+							</View>
 						</View>
 					</View>
-
-					<Text style={styles.changePhotoText}>Change photo</Text>
-				</View>
+				</TouchableOpacity>
 
 				<View style={styles.formSection}>
 					<View style={styles.fieldContainer}>
@@ -100,6 +147,7 @@ export default function EditProfile() {
 							placeholder="Faustoche"
 							value={username}
 							onChangeText={setUsername}
+							autoCapitalize="none"
 						/>
 					</View>
 
@@ -110,6 +158,7 @@ export default function EditProfile() {
 							placeholder="faustoche@gmail.com"
 							value={email}
 							onChangeText={setEmail}
+							autoCapitalize="none"
 						/>
 					</View>
 

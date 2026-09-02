@@ -45,6 +45,7 @@ export function ChangePasswordModal({ visible, onClose, onSubmit }: ChangePasswo
 							<CustomInput
 								placeholder="••••••••"
 								value={currentPassword}
+								secureTextEntry={true}
 								onChangeText={setCurrentPassword}
 							/>
 						</View>
@@ -55,6 +56,7 @@ export function ChangePasswordModal({ visible, onClose, onSubmit }: ChangePasswo
 							<CustomInput
 								placeholder="••••••••"
 								value={newPassword}
+								secureTextEntry={true}
 								onChangeText={setNewPassword}
 							/>
 						</View>
@@ -65,6 +67,7 @@ export function ChangePasswordModal({ visible, onClose, onSubmit }: ChangePasswo
 							<CustomInput
 								placeholder="••••••••"
 								value={confirmPassword}
+								secureTextEntry={true}
 								onChangeText={setConfirmPassword}
 							/>
 						</View>

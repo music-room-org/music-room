@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
   ignoreTLS: true,
 });
 
-export async function registerUser(email: string, password: string) {
+export async function registerUser(email: string, password: string, username: string) {
   if (!validateEmail(email)) throw new Error("Invalid email");
   if (!validatePassword(password)) throw new Error("Invalid password");
 
@@ -28,6 +28,7 @@ export async function registerUser(email: string, password: string) {
 	data: {
 	  email: email,
 	  passwordHash: hashedPassword,
+	  username: username
 	},
   });
 
@@ -117,4 +118,18 @@ export async function loginWithGoogle(googleToken: string) {
 	);
 
 	return token;
+}
+
+export async function getUserProfile(userId: string) {
+	const user = await prisma.user.findUnique({
+		where: {
+			id: userId,
+		},
+	});
+
+	return {
+		username: user?.username,
+		email: user?.email,
+		profileImage: user?.profileImage,
+	}
 }

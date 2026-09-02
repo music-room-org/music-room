@@ -16,20 +16,22 @@ export class AppController {
 	async updateProfile(
 		@Request() req,
 		@Body() body: {
-			displayName?: string;
+			username?: string;
 			email?: string;
 			currentPassword?: string;
 			newPassword?: string;
+			profileImage: string;
 		},
 	) {
-		const { displayName, email, currentPassword, newPassword } = body;
+		const { username, email, currentPassword, newPassword, profileImage } = body;
 
 		return this.appService.updateProfile(
 			req.userId,
-			displayName,
+			username,
 			email,
 			currentPassword,
 			newPassword,
+			profileImage,
 		);
 	}
 }

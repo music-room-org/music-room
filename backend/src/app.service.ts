@@ -12,10 +12,11 @@ export class AppService {
 
 	async updateProfile(
 		userId: string,
-		displayName?: string,
+		username?: string,
 		email?: string,
 		currentPassword?: string,
 		newPassword?: string,
+		profileImage?: string,
 	) {
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
@@ -47,9 +48,10 @@ export class AppService {
 		return this.prisma.user.update({
 			where: { id: userId },
 			data: {
-				...(displayName && { displayName }),
+				...(username && { username }),
 				...(email && { email }),
 				...(passwordHash && { passwordHash }),
+				...(profileImage && { profileImage }),
 			},
 		});
 	}
