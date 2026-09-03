@@ -6,15 +6,21 @@ import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/fonts";
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from "react-native";
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 export function HomeScreen() {
 
+const router = useRouter();
 const [username, setUsername] = useState("");
 
 const fetchProfile = useCallback(async () => {
     try {
         const token = await SecureStore.getItemAsync('userToken');
+
+        if (!token) {
+            router.replace('/login');
+            return;
+        }
 
         const apiUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000/auth/profil' : 'http://localhost:3000/auth/profil';
 

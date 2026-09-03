@@ -21,6 +21,11 @@ export default function Profile() {
 				try {
 					const token = await SecureStore.getItemAsync("userToken");
 
+					if (!token) {
+						router.replace('/login');
+						return;
+					}
+					
 					const response = await fetch(`${apiUrl}/auth/profil`, {
 					method: "GET",
 					headers: {
@@ -42,8 +47,8 @@ export default function Profile() {
 		);
 
 	async function handleLogout() {
-		SecureStore.deleteItemAsync('userToken');
-		router.replace('/');
+		await SecureStore.deleteItemAsync('userToken');
+		router.replace('/login');
 	}
 
 	return (
