@@ -16,6 +16,7 @@ export default function EditProfile() {
 	const [isModalVisible, setModalVisible] = useState(false);
 	const [username, setUsername] = useState("");
 	const [profileImage, setProfileImage] = useState("");
+	const [authProvider, setAuthProvider] = useState("");
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 	
@@ -37,6 +38,7 @@ export default function EditProfile() {
 				setUsername(data.username);
 				setEmail(data.email);
 				setProfileImage(data.profileImage)
+				setAuthProvider(data.authProvider || "");
 			} catch (error) {
 				console.error(error);
 			}
@@ -159,28 +161,28 @@ export default function EditProfile() {
 							value={email}
 							onChangeText={setEmail}
 							autoCapitalize="none"
+							editable={authProvider !== "GOOGLE"}
 						/>
 					</View>
 
-					<View style={styles.fieldContainer}>
-						<Text style={styles.label}>Password</Text>
-
-						<TouchableOpacity
-							style={styles.passwordTrigger}
-							onPress={() => setModalVisible(true)}
-						>
-							<Lock size={20} color={COLORS.textPrimary} />
-
-							<Text style={styles.passwordTriggerText}>
-								Change my password
-							</Text>
-
-							<ChevronRight
-								size={20}
-								color={COLORS.textPrimary}
-							/>
-						</TouchableOpacity>
-					</View>
+					{authProvider !== "GOOGLE" && (
+						<View style={styles.fieldContainer}>
+							<Text style={styles.label}>Password</Text>
+							<TouchableOpacity
+								style={styles.passwordTrigger}
+								onPress={() => setModalVisible(true)}
+							>
+								<Lock size={20} color={COLORS.textPrimary} />
+								<Text style={styles.passwordTriggerText}>
+									Change my password
+								</Text>
+								<ChevronRight
+									size={20}
+									color={COLORS.textPrimary}
+								/>
+							</TouchableOpacity>
+						</View>
+					)}
 
 					<ChangePasswordModal
 						visible={isModalVisible}

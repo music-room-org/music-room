@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react-native";
+import { Eye, EyeOff, LockKeyhole, Mail, User } from "lucide-react-native";
 import * as Linking from 'expo-linking';
 import {
 	AuthHeader,
@@ -220,7 +220,7 @@ export function AuthScreen() {
 										value={username}
 										onChangeText={setUsername}
 										autoCapitalize="none"
-										leftIcon={<Mail size={22} color={COLORS.inputIcon} />}
+										leftIcon={<User size={22} color={COLORS.inputIcon} />}
 									/>
 								)}
 

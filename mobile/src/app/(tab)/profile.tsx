@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, StyleSheet, Image, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight, LogOut } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { ProfileStat, ProfileActionButton, ActivityItem, FriendAvatar } from "@/components";
@@ -41,6 +41,11 @@ export default function Profile() {
 			}, [])
 		);
 
+	async function handleLogout() {
+		SecureStore.deleteItemAsync('userToken');
+		router.replace('/');
+	}
+
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<ScrollView style={styles.scrollContent}>
@@ -77,6 +82,12 @@ export default function Profile() {
 							title="Add new friends"
 							isPrimary={false}
 							icon={<UserPlus color='black' />}
+						/>
+						<ProfileActionButton
+							title="Log out"
+							isPrimary={false}
+							icon={<LogOut color='black' />}
+							onPress={() => handleLogout()}
 						/>
 					</View>
 					<View style={styles.divider}></View>
