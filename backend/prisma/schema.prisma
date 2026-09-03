@@ -30,6 +30,8 @@ model User {
   emailVerified Boolean      @default(false)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  playlists Playlist[]
+  votes Vote[]
   profileImage    String?
 
   // Public information
@@ -48,4 +50,49 @@ model User {
 
   // Music preferences
   favoriteGenres String[]
+
+
+}
+
+model Playlist {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation : à quel utilisateur appartient cette playlist
+  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String
+
+  tracks Track[]
+}
+
+model Track {
+  id       String   @id @default(uuid())
+  title    String
+  artist   String?
+  sourceId String
+  addedAt  DateTime @default(now())
+
+  // Relation : à quelle playlist appartient ce morceau
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
+  playlistId String
+  votes Vote[]
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Qui vote
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // Pour quel morceau
+  track   Track  @relation(fields: [trackId], references: [id])
+  trackId String
+
+  // Un même user ne peut voter qu'une fois par morceau
+  @@unique([userId, trackId])
+
 }
