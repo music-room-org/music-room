@@ -15,24 +15,27 @@ const [username, setUsername] = useState("");
 
 const fetchProfile = useCallback(async () => {
     try {
-        const token = await SecureStore.getItemAsync('userToken');
+        const token =
+            Platform.OS === 'web'
+                ? localStorage.getItem('userToken')
+                : await SecureStore.getItemAsync('userToken');
 
         if (!token) {
             router.replace('/login');
             return;
         }
 
-        const apiUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000/auth/profil' : 'http://localhost:3000/auth/profil';
+        const apiUrl =
+            Platform.OS === 'android'
+                ? 'http://10.0.2.2:3000/auth/profil'
+                : 'http://localhost:3000/auth/profil';
 
-        const response = await fetch(
-            apiUrl,
-            {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            }
-        );
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
 
         const data = await response.json();
 

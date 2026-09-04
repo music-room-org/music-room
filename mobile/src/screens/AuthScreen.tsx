@@ -90,13 +90,21 @@ export function AuthScreen() {
 
 			if (response.ok) {
 				const data = await response.json();
-				await SecureStore.setItemAsync("userToken", data.token);
+				await saveToken(data.token);
 				router.replace("/(tab)");
 			} else {
 				alert ("Network error: connection refused");
 			}
 		} catch (error) {
 			console.log("Google login error:", error);
+		}
+	}
+
+	async function saveToken(token: string) {
+		if (Platform.OS === "web") {
+			localStorage.setItem("userToken", token);
+		} else {
+			await SecureStore.setItemAsync("userToken", token);
 		}
 	}
 
@@ -169,7 +177,7 @@ export function AuthScreen() {
 				});
 				if (response.ok) {
 					const data = await response.json();
-					await SecureStore.setItemAsync("userToken", data.token);
+					await saveToken(data.token);
 					setSuccessMessage("Connexion réussie");
 					router.replace("/(tab)");
 				} else {

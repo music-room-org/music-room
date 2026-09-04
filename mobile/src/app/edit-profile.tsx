@@ -19,11 +19,17 @@ export default function EditProfile() {
 	const [authProvider, setAuthProvider] = useState("");
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+
+	const getToken = async () => {
+		return Platform.OS === "web"
+			? localStorage.getItem("userToken")
+			: await SecureStore.getItemAsync("userToken");
+	};
 	
 	useEffect(() => {
 		const fetchProfile = async () => {
 			try {
-				const token = await SecureStore.getItemAsync('userToken');
+				const token = await getToken()
 				const response = await fetch(
 					`${apiUrl}/auth/profil`,
 					{
@@ -49,7 +55,7 @@ export default function EditProfile() {
 	
 	const handleSaveProfile = async () => {
 		try {
-			const token = await SecureStore.getItemAsync("userToken");
+			const token = await getToken()
 
 			const response = await fetch(`${apiUrl}/profile`, {
 			method: "PATCH",
@@ -81,7 +87,7 @@ export default function EditProfile() {
 	};
 
 	const handleSavePassword = async (currentPass: string, newPass: string) => {
-		const token = await SecureStore.getItemAsync("userToken");
+		const token = await getToken()
 		await fetch(`${apiUrl}/profile`, {
 			method: "PATCH",
 			headers: {

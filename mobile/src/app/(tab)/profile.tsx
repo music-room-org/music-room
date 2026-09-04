@@ -19,7 +19,11 @@ export default function Profile() {
 			useCallback(() => {
 				const fetchProfile = async () => {
 				try {
-					const token = await SecureStore.getItemAsync("userToken");
+					// const token = await SecureStore.getItemAsync("userToken");
+					const token =
+						Platform.OS === "web"
+							? localStorage.getItem("userToken")
+							: await SecureStore.getItemAsync("userToken");
 
 					if (!token) {
 						router.replace('/login');
@@ -46,9 +50,19 @@ export default function Profile() {
 			}, [])
 		);
 
+	// async function handleLogout() {
+	// 	await SecureStore.deleteItemAsync('userToken');
+	// 	router.replace('/login');
+	// }
+
 	async function handleLogout() {
-		await SecureStore.deleteItemAsync('userToken');
-		router.replace('/login');
+		if (Platform.OS === "web") {
+			localStorage.removeItem("userToken");
+		} else {
+			await SecureStore.deleteItemAsync("userToken");
+		}
+
+		router.replace("/login");
 	}
 
 	return (
