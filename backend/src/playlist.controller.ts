@@ -3,26 +3,44 @@ import {
   Post,
   Get,
   Body,
+  Param,
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { createPlaylist, getPlaylists } from './services/playlist';
-import { Guard } from './security/guard'; // on importe le Guard
+import {
+  createPlaylist,
+  getPublicPlaylists,
+  getMyPlaylists,
+  getPlaylistById,
+} from './services/playlist';
+import { Guard } from './security/guard';
 
 @Controller('playlists')
 export class PlaylistController {
   // POST /playlists → créer une playlist (protégée)
-  @UseGuards(Guard) // protection : faut être connecté
+  @UseGuards(Guard)
   @Post()
   async create(@Body() body: any, @Request() request: any) {
-    // ownerId vient du TOKEN (la personne connectée), pas du body
     return await createPlaylist(body.name, request.userId);
   }
 
-  // GET /playlists → lister (protégée aussi)
-  @UseGuards(Guard) // protection
+  // GET /playlists → les playlists publiques
   @Get()
   async findAll() {
-    return await getPlaylists();
+    return await getPublicPlaylists();
+  }
+
+  // GET /playlists/mine → MES playlists
+  @UseGuards(Guard)
+  @Get('mine')
+  async findMine(@Request() request: any) {
+    return await getMyPlaylists(request.userId);
+  }
+
+  // GET /playlists/:id → UNE playlist
+  @UseGuards(Guard)
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return await getPlaylistById(id);
   }
 }

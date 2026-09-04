@@ -15,8 +15,23 @@ export async function createPlaylist(name: string, ownerId: string) {
   return playlist;
 }
 
-// Lister toutes les playlists
-export async function getPlaylists() {
-  const playlists = await prisma.playlist.findMany();
-  return playlists;
+// Récupérer UNE playlist par son id
+export async function getPlaylistById(id: string) {
+  return await prisma.playlist.findUnique({
+    where: { id: id },
+  });
+}
+
+// Récupérer les playlists d'un utilisateur (les siennes)
+export async function getMyPlaylists(ownerId: string) {
+  return await prisma.playlist.findMany({
+    where: { ownerId: ownerId },
+  });
+}
+
+// Récupérer les playlists PUBLIQUES
+export async function getPublicPlaylists() {
+  return await prisma.playlist.findMany({
+    where: { isPublic: true },
+  });
 }

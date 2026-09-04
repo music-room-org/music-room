@@ -55,6 +55,7 @@ model User {
 model Playlist {
   id        String   @id @default(uuid())
   name      String
+  isPublic  Boolean  @default(true)    
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -92,5 +93,5 @@ model Vote {
 
   // Un même user ne peut voter qu'une fois par morceau
   @@unique([userId, trackId])
-
 }
+
