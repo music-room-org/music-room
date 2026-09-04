@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 const client = new OAuth2Client("119307991318-6q08olkvff98ol795k125ff5boh9ng8l.apps.googleusercontent.com")
 
 const transporter = nodemailer.createTransport({
-  host: "localhost",
+  host: "127.0.0.1",
   port: 1025,
   secure: false,
   ignoreTLS: true,
@@ -28,7 +28,8 @@ export async function registerUser(email: string, password: string, username: st
 	data: {
 	  email: email,
 	  passwordHash: hashedPassword,
-	  username: username
+	  username: username,
+	  profileImage: "https://static.wixstatic.com/media/3c3602_b3624d3df2e34b27823234bbeb7ac298~mv2.jpg/v1/fill/w_485,h_485,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Joe-Cool---color.jpg"
 	},
   });
 
@@ -107,6 +108,7 @@ export async function loginWithGoogle(googleToken: string) {
 			email,
 			emailVerified: true,
 			AuthProvider: "GOOGLE",
+			profileImage: "https://static.wixstatic.com/media/3c3602_b3624d3df2e34b27823234bbeb7ac298~mv2.jpg/v1/fill/w_485,h_485,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Joe-Cool---color.jpg"
 			},
 		});
 	}
