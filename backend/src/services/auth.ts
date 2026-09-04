@@ -1,6 +1,6 @@
 import { validateEmail, validatePassword } from "../utils/validators";
 import bcrypt from "bcrypt";
-import { PrismaClient } from "@prisma/client";
+import { AuthProvider, PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import * as nodemailer from "nodemailer";
@@ -28,7 +28,8 @@ export async function registerUser(email: string, password: string, username: st
 	data: {
 	  email: email,
 	  passwordHash: hashedPassword,
-	  username: username
+	  username: username,
+	  profileImage: "https://static.wixstatic.com/media/5fdc83_7f6f3eb17d5d4e1584497cffd749463c~mv2.jpg/v1/fill/w_970,h_500,al_c,q_85,enc_avif,quality_auto/The_Snoopy_Show_970x500.jpg"
 	},
   });
 
@@ -102,11 +103,16 @@ export async function loginWithGoogle(googleToken: string) {
 	});
 
 	if (!user) {
+
+		const randomUsername = "user" + Math.floor(Math.random() * 1000);
+
 		user = await prisma.user.create({
 			data: {
 			email,
 			emailVerified: true,
 			AuthProvider: "GOOGLE",
+			username: randomUsername,
+			profileImage: "https://static.wixstatic.com/media/5fdc83_7f6f3eb17d5d4e1584497cffd749463c~mv2.jpg/v1/fill/w_970,h_500,al_c,q_85,enc_avif,quality_auto/The_Snoopy_Show_970x500.jpg"
 			},
 		});
 	}
@@ -131,5 +137,6 @@ export async function getUserProfile(userId: string) {
 		username: user?.username,
 		email: user?.email,
 		profileImage: user?.profileImage,
+		AuthProvider: user?.AuthProvider,
 	}
 }
