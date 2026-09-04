@@ -111,12 +111,8 @@ export async function loginWithGoogle(googleToken: string) {
 			email,
 			emailVerified: true,
 			AuthProvider: "GOOGLE",
-<<<<<<< HEAD
-			profileImage: "https://static.wixstatic.com/media/3c3602_b3624d3df2e34b27823234bbeb7ac298~mv2.jpg/v1/fill/w_485,h_485,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Joe-Cool---color.jpg"
-=======
 			username: randomUsername,
 			profileImage: "https://static.wixstatic.com/media/5fdc83_7f6f3eb17d5d4e1584497cffd749463c~mv2.jpg/v1/fill/w_970,h_500,al_c,q_85,enc_avif,quality_auto/The_Snoopy_Show_970x500.jpg"
->>>>>>> 898f0b2ac90d1e411f734b8e88ddfc19e3af00b6
 			},
 		});
 	}
