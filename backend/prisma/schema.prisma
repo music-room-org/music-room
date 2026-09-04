@@ -63,7 +63,7 @@ model Playlist {
   owner   User   @relation(fields: [ownerId], references: [id])
   ownerId String
 
-  tracks Track[]
+  playlistTracks PlaylistTrack[]
 }
 
 model Track {
@@ -74,10 +74,22 @@ model Track {
   addedAt  DateTime @default(now())
 
   // Relation : à quelle playlist appartient ce morceau
-  playlist   Playlist @relation(fields: [playlistId], references: [id])
-  playlistId String
+  playlistTracks PlaylistTrack[]
+
   votes Vote[]
 }
+
+model PlaylistTrack {
+	track		Track	@relation(fields: [trackId], references: [id])
+	trackId		String
+	playlist	Playlist	@relation(fields: [playlistId], references: [id])
+	playlistId	String
+	position	Int
+	addedAt		DateTime @default(now())
+
+  @@id([playlistId, trackId])  
+}
+
 
 model Vote {
   id        String   @id @default(uuid())

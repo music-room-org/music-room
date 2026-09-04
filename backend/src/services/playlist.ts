@@ -35,3 +35,13 @@ export async function getPublicPlaylists() {
     where: { isPublic: true },
   });
 }
+
+// Playlists PUBLIQUES d'un autre utilisateur
+export async function getUserPublicPlaylists(ownerId: string) {
+  return await prisma.playlist.findMany({
+    where: {
+      ownerId: ownerId,
+      isPublic: true,
+    },
+  });
+}
