@@ -3,6 +3,10 @@ import { Home, Search, Disc, User } from "lucide-react-native";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { BottomTabBarProps } from "expo-router/build/react-navigation/bottom-tabs";
 import { COLORS } from "@/constants";
+import { useEffect } from "react";
+import * as SecureStore from "expo-secure-store";
+import { io } from "socket.io-client";
+import { Platform, Alert } from "react-native";
 
 const ICONS = {
 	index: Home,
@@ -48,6 +52,34 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function TabsLayout() {
+	useEffect(() => {
+		let socket: ReturnType<typeof io>;
+
+		const connectSocket = async () => {
+			const token = await SecureStore.getItemAsync("userToken");
+
+			if (!token)
+				return;
+
+			const apiUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+
+			socket = io(apiUrl, {
+				extraHeaders: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
+
+			socket.on("newRequest", () => {
+				Alert.alert("New friend request!");
+			});
+		};
+
+		connectSocket();
+		return () => {
+			socket?.disconnect();
+		}
+	})
+
 	return (
 		<Tabs
 			tabBar={(props) => <CustomTabBar {...props} />}

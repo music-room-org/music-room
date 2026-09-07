@@ -1,11 +1,74 @@
-import { View, ScrollView, Text, Image, StyleSheet } from "react-native";
+import { View, ScrollView, Text, StyleSheet, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
+
 import { COLORS, FONTS } from "@/constants";
-import { SearchBar, CategoryTabs, TrackListItem, PlaylistItem } from "@/components";
+import { SearchBar, PrimaryButton } from "@/components";
 
 export default function Research() {
 	const [activeTab, setActiveTab] = useState('Titles');
+	const [searchQuery, setSearchQuery] = useState('');
+	const [searchResults, setSearchResults] = useState<any[]>([]);
+	const [pendingRequests, setPendingRequests] = useState<string[]>([]);
+
+	const sendRequest = async (targetId: string) => {
+		const token = await SecureStore.getItemAsync("userToken");
+
+		if (!token) return;
+
+		const apiUrl =
+			Platform.OS === "android"
+				? "http://10.0.2.2:3000"
+				: "http://localhost:3000";
+
+		const response = await fetch(`${apiUrl}/friends/request`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({
+				receiverId: targetId,
+			}),
+		});
+
+		const data = await response.json();
+		setPendingRequests((prev) => [...prev, targetId]);
+		console.log(data);
+	};
+
+	useEffect(() => {
+		const searchUsers = async () => {
+			if (!searchQuery.trim()) {
+				setSearchResults([]);
+				return;
+			}
+
+			const token = await SecureStore.getItemAsync("userToken");
+
+			if (!token) return;
+
+			const apiUrl =
+				Platform.OS === "android"
+					? "http://10.0.2.2:3000"
+					: "http://localhost:3000";
+
+			const response = await fetch(
+				`${apiUrl}/friends/search?q=${encodeURIComponent(searchQuery)}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			const data = await response.json();
+			setSearchResults(data);
+		};
+
+		searchUsers();
+	}, [searchQuery]);
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -13,63 +76,33 @@ export default function Research() {
 				style={styles.scrollContent}
 				showsVerticalScrollIndicator={false}
 			>
-				<SearchBar />
-				<CategoryTabs
-					activeTab={activeTab}
-					onTabChange={setActiveTab}
+				<SearchBar
+					value={searchQuery}
+					onChangeText={setSearchQuery}
 				/>
 
 				<View style={styles.sectionContainer}>
-					<Text style={styles.sectionTitle}>Trending now</Text>
+					{searchResults.map((user: any) => (
+						<View
+							key={user.id}
+							style={styles.userCard}
+						>
+							<Text style={styles.username}>
+								{user.username}
+							</Text>
 
-					<TrackListItem
-						title="Psycho shit"
-						subtitle="The Strokes"
-						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-					/>
-					<TrackListItem
-						title="NUEVAYoL"
-						subtitle="Bad Bunny"
-						imageUrl="https://media.pitchfork.com/photos/682b43f9d6a2575d172e91a4/1:1/w_320,c_limit/Bad-Bunny-Debi-Tirar-Mas-Fotos.jpeg"
-					/>
-					<TrackListItem
-						title="Man I need"
-						subtitle="Olivia Dean"
-						imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
-					/>
-					<TrackListItem
-						title="Dai dai"
-						subtitle="Shakira"
-						imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
-					/>
-				</View>
-
-				<View style={styles.sectionContainer}>
-					<Text style={styles.sectionTitle}>Popular playlist</Text>
-					<PlaylistItem
-						title="Psycho shit"
-						listenersText="3423 monthly listeners"
-						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-					/>
-					<PlaylistItem
-						title="NUEVAYoL"
-						listenersText="Bad Bunny"
-						imageUrl="https://media.pitchfork.com/photos/682b43f9d6a2575d172e91a4/1:1/w_320,c_limit/Bad-Bunny-Debi-Tirar-Mas-Fotos.jpeg"
-					/>
-					<PlaylistItem
-						title="Man I need"
-						listenersText="Olivia Dean"
-						imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
-					/>
-					<PlaylistItem
-						title="Dai dai"
-						listenersText="Shakira"
-						imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
-					/>
+							<PrimaryButton
+								title={ pendingRequests.includes(user.id) ? "En attente" : "Ajouter" }
+								buttonStyle={ pendingRequests.includes(user.id) ? { backgroundColor: COLORS.button_secondary } : undefined }
+								disabled={pendingRequests.includes(user.id)}
+								onPress={() => sendRequest(user.id)}
+							/>
+						</View>
+					))}
 				</View>
 			</ScrollView>
 		</SafeAreaView>
-	)
+	);
 }
 
 const styles = StyleSheet.create({
@@ -77,26 +110,28 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: COLORS.background
 	},
+
 	scrollContent: {
 		paddingHorizontal: 24,
 		paddingTop: 20,
 		paddingBottom: 100
 	},
-	illustration: {
-		position: 'absolute',
-		right: -24,
-		top: 150,
-		width: 150,
-		height: 150,
-		resizeMode: 'contain'
-	},
+
 	sectionContainer: {
-		marginTop: 32
+		marginTop: 24
 	},
-	sectionTitle: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 22,
-		color: COLORS.textPrimary,
+
+	userCard: {
+		backgroundColor: COLORS.white,
+		borderRadius: 16,
+		padding: 16,
 		marginBottom: 16
+	},
+
+	username: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 18,
+		color: COLORS.textPrimary,
+		marginBottom: 12
 	}
 });
