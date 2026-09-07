@@ -57,12 +57,42 @@ export class FriendsService {
 	}
 
 	async updateRequestStatus(friendshipId: string, status: FriendshipStatus) {
-		return this.prisma.friendship.update({
+		const friendship = await this.prisma.friendship.update({
 			where: {
 				id: friendshipId,
 			},
 			data: {
 				status,
+			},
+		});
+
+		if (status === FriendshipStatus.ACCEPTED) {
+			const senderSocketId = this.friendsGateway.activeUsers.get(friendship.senderId);
+			const receiverSocketId = this.friendsGateway.activeUsers.get(friendship.receiverId);
+			if (senderSocketId) {
+				this.friendsGateway.server.to(senderSocketId).emit('friendAccepted', friendship);
+			}
+
+			if (receiverSocketId) {
+				this.friendsGateway.server.to(receiverSocketId).emit('friendAccepted', friendship);
+			}
+		}
+
+		return friendship;
+	}
+
+	async getFriendsList(userId: string) {
+		return this.prisma.friendship.findMany({
+			where: {
+				status: FriendshipStatus.ACCEPTED,
+				OR: [
+					{ senderId: userId },
+					{ receiverId: userId },
+				],
+			},
+			include: {
+				sender: true,
+				receiver: true,
 			},
 		});
 	}

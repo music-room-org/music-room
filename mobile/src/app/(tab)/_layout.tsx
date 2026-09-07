@@ -72,13 +72,16 @@ export default function TabsLayout() {
 			socket.on("newRequest", () => {
 				Alert.alert("New friend request!");
 			});
+			socket.on("friendAccepted", () => {
+				Alert.alert("Friend request accepted!");
+			});
 		};
 
 		connectSocket();
 		return () => {
 			socket?.disconnect();
-		}
-	})
+		};
+	}, []);
 
 	return (
 		<Tabs

@@ -39,4 +39,9 @@ export class FriendsController {
 	) {
 		return this.friendsService.updateRequestStatus(body.friendshipId, body.status);
 	}
+
+	@Get('list')
+	getFriendsList(@Request() req) {
+		return this.friendsService.getFriendsList(req.userId);
+	}
 }

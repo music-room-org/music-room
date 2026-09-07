@@ -15,6 +15,7 @@ export default function Profile() {
 		const [profileImage, setProfileImage] = useState("");
 		const [friendRequests, setFriendRequests] = useState<any[]>([]);
 		const [isModalVisible, setIsModalVisible] = useState(false);
+		const [friendsList, setFriendsList] = useState<any[]>([]);
 
 		const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 		
@@ -57,6 +58,18 @@ export default function Profile() {
 						const requestsData = await requestsResponse.json();
 
 						setFriendRequests(requestsData);
+						const friendsResponse = await fetch(
+							`${apiUrl}/friends/list`,
+							{
+								method: 'GET',
+								headers: {
+									Authorization: `Bearer ${token}`,
+								},
+							}
+						);
+						const friendsData = await friendsResponse.json();
+						setFriendsList(friendsData);
+
 					} catch (error) {
 						console.error(error);
 					}
@@ -163,7 +176,7 @@ export default function Profile() {
 					<View style={styles.statsRow}>
 						<ProfileStat value="46" label="playlists" />
 						<ProfileStat value="348" label="liked titles" />
-						<ProfileStat value="24" label="friends" />
+						<ProfileStat value={friendsList.length.toString()} label="friends" />
 					</View>
 
 					<View style={styles.buttonsContainer}>
@@ -221,24 +234,20 @@ export default function Profile() {
 					showsHorizontalScrollIndicator={false}
 					contentContainerStyle={styles.friendsScroll}
 				>
-					<FriendAvatar
-						name="Joëlle"
-						bgColor="#E5F2EE"
-					/>
-					<FriendAvatar
-						name="Antonin"
-						bgColor="#EBE6F3"
-					/>
-					<FriendAvatar
-						name="Octave"
-						bgColor="#FBECEE"
-					/>
-					<FriendAvatar
-						isMore={true}
-						name=""
-						moreCount="+21"
-						bgColor="#FDF0DF"
-					/>
+
+					{friendsList.map((friend) => {
+						const friendUser = friend.sender.username === username
+							? friend.receiver
+							: friend.sender;
+						return (
+							<FriendAvatar
+								key={friend.id}
+								name={friendUser.username}
+								profileImage={friendUser.profileImage}
+								bgColor="#E5F2EE"
+							/>
+						);
+					})}
 				</ScrollView>
 			</ScrollView>
 
