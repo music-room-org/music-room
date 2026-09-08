@@ -75,8 +75,6 @@ model Track {
 
   // Relation : à quelle playlist appartient ce morceau
   playlistTracks PlaylistTrack[]
-
-  votes Vote[]
 }
 
 model PlaylistTrack {
@@ -90,20 +88,42 @@ model PlaylistTrack {
   @@id([playlistId, trackId])  
 }
 
+model LiveSession {
+	id					String		@id @default(uuid())
+	name				String
+	hostUserId			String
+	createdAt			DateTime	@default(now())
+
+	//TODO rajouter peut etre date et lieu de la session?
+
+
+	liveSessionTracks	LiveSessionTrack[]
+}
+
+model LiveSessionTrack {
+	liveSession		LiveSession	@relation(fields: [liveSessionId], references: [id])
+	liveSessionId	String
+	track			Track		@relation(fields: [trackId], references: [id])
+	trackId			String
+	addedAt			DateTime		@default(now())
+
+	votes			Vote[]
+	@@id([liveSessionId, trackId])
+}
 
 model Vote {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
+	createdAt	DateTime		@default(now())
 
-  // Qui vote
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
+	// Qui vote
+	user	User	@relation(fields: [userId], references: [id])
+	userId	String
 
-  // Pour quel morceau
-  track   Track  @relation(fields: [trackId], references: [id])
-  trackId String
+	// Pour quel morceau et quelle session
+	liveSessionTrack	LiveSessionTrack	@relation(fields: [liveSessionId, trackId], references: [liveSessionId, trackId])
+	liveSessionId		String
+	trackId				String
 
-  // Un même user ne peut voter qu'une fois par morceau
-  @@unique([userId, trackId])
+	// Un même user ne peut voter qu'une fois par morceau par session
+	@@id([liveSessionId, trackId,  userId])
 }
 
