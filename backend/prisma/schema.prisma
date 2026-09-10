@@ -73,8 +73,9 @@ model Track {
   sourceId String
   addedAt  DateTime @default(now())
 
-  // Relation : à quelle playlist appartient ce morceau
-  playlistTracks PlaylistTrack[]
+  // Relation : à quelle playlist ou liveSession appartient ce morceau
+  playlistTracks	PlaylistTrack[]
+  liveSessionTracks	LiveSessionTrack[]
 }
 
 model PlaylistTrack {
@@ -93,9 +94,10 @@ model LiveSession {
 	name				String
 	hostUserId			String
 	createdAt			DateTime	@default(now())
-
+	isPublic			Boolean		@default(true)
 	//TODO rajouter peut etre date et lieu de la session?
 
+	invitedUsers		User[]
 
 	liveSessionTracks	LiveSessionTrack[]
 }
