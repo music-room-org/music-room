@@ -19,12 +19,15 @@ export class FriendsGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
 	const token = authorization.split(' ')[1];
 
-	const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+	try {
+		const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+		const userId = decoded.id;
 	
-	const userId = decoded.id;
-
-	if (userId) {
-		this.activeUsers.set(userId, client.id);
+		if (userId) {
+			this.activeUsers.set(userId, client.id);
+		}
+	} catch {
+		client.disconnect();
 	}
   }
 

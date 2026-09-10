@@ -3,10 +3,10 @@ import { Home, Search, Disc, User } from "lucide-react-native";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { BottomTabBarProps } from "expo-router/build/react-navigation/bottom-tabs";
 import { COLORS } from "@/constants";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { io } from "socket.io-client";
-import { Platform, Alert } from "react-native";
+import { Platform, Alert, DeviceEventEmitter } from "react-native";
 
 const ICONS = {
 	index: Home,
@@ -15,7 +15,7 @@ const ICONS = {
 	profile: User,
 };
 
-function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+function CustomTabBar({ state, descriptors, navigation, hasNotification }: BottomTabBarProps & { hasNotification: boolean }) {
 	return (
 		<View style={styles.tabBar}>
 			{state.routes.map((route, index) => {
@@ -43,6 +43,10 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 					>
 						<View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
 							<Icon color={color} size={26} />
+
+							{route.name === 'profile' && hasNotification && (
+								<View style={styles.notificationBadge} />
+							)}
 						</View>
 					</TouchableOpacity>
 				);
@@ -52,6 +56,9 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function TabsLayout() {
+
+	const [hasNotification, setHasNotification] = useState(false);
+
 	useEffect(() => {
 		let socket: ReturnType<typeof io>;
 
@@ -63,6 +70,18 @@ export default function TabsLayout() {
 
 			const apiUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
 
+			const response = await fetch(`${apiUrl}/friends/pending`, {
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
+
+			if (response.ok) {
+				const pendingRequests = await response.json();
+				if (pendingRequests.length > 0)
+					setHasNotification(true);
+			}
+
 			socket = io(apiUrl, {
 				extraHeaders: {
 					Authorization: `Bearer ${token}`,
@@ -70,12 +89,17 @@ export default function TabsLayout() {
 			});
 
 			socket.on("newRequest", () => {
+				setHasNotification(true);
 				Alert.alert("New friend request!");
 			});
 			socket.on("friendAccepted", () => {
 				Alert.alert("Friend request accepted!");
 			});
 		};
+
+		const subscription = DeviceEventEmitter.addListener(
+			"clearNotification", () => {setHasNotification(false);}
+		);
 
 		connectSocket();
 		return () => {
@@ -85,7 +109,7 @@ export default function TabsLayout() {
 
 	return (
 		<Tabs
-			tabBar={(props) => <CustomTabBar {...props} />}
+			tabBar={(props) => <CustomTabBar {...props} hasNotification={hasNotification} />}
 			screenOptions={{
 				headerShown: false,
 			}}
@@ -120,6 +144,15 @@ const styles = StyleSheet.create({
 		height: '100%',
 		justifyContent: 'center',
 		alignItems: 'center',
+	},
+	notificationBadge: {
+		position: 'absolute',
+		top: 8,
+		right: 8,
+		width: 12,
+		height: 12,
+		borderRadius: 6,
+		backgroundColor: 'red'
 	},
 	iconContainer: {
 		width: 50,

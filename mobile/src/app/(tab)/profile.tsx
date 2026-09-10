@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, StyleSheet, Image, Platform, Modal, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Image, Platform, Modal, TouchableOpacity, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight, LogOut, Bell } from "lucide-react-native";
+import { ChevronLeft, Check, X, Pencil, UserPlus, ChevronRight, LogOut, Bell } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { ProfileStat, ProfileActionButton, ActivityItem, FriendAvatar } from "@/components";
@@ -117,9 +117,14 @@ export default function Profile() {
 			}),
 		});
 
-		setFriendRequests((prev) =>
-			prev.filter((request) => request.id !== requestId)
-		);
+		setFriendRequests((prev) => {
+			const updatedRequests = prev.filter((request) => request.id !== requestId);
+
+			if (updatedRequests.length === 0) {
+				DeviceEventEmitter.emit("clearNotification");
+			}
+			return updatedRequests;
+		});
 	};
 
 	return (
@@ -277,14 +282,13 @@ export default function Profile() {
 							onPress={() => setIsModalVisible(false)}
 							style={{ marginBottom: 20 }}
 						>
-							<Text>Close</Text>
+							<X size={24} color="black"/>
 						</TouchableOpacity>
 
 						<View style={styles.sectionHeader}>
 							<Text style={styles.sectionTitle}>
 								Friends request
 							</Text>
-							<ChevronRight />
 						</View>
 
 						<View style={styles.activityContainer}>
@@ -312,9 +316,7 @@ export default function Profile() {
 												)
 											}
 										>
-											<Text style={{ color: "green" }}>
-												Accept
-											</Text>
+											<Check size={24} color="green"/>
 										</TouchableOpacity>
 
 										<TouchableOpacity
@@ -325,9 +327,7 @@ export default function Profile() {
 												)
 											}
 										>
-											<Text style={{ color: "red" }}>
-												Refuse
-											</Text>
+											<X size={24} color="red"/>
 										</TouchableOpacity>
 									</View>
 								</View>
