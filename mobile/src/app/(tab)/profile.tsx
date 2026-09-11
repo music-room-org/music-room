@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, StyleSheet, Image, Platform } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Image, Platform, Modal, TouchableOpacity, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight, LogOut } from "lucide-react-native";
+import { ChevronLeft, Check, X, Pencil, UserPlus, ChevronRight, LogOut, Bell } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { ProfileStat, ProfileActionButton, ActivityItem, FriendAvatar } from "@/components";
@@ -13,37 +13,66 @@ export default function Profile() {
 	const router = useRouter();
 		const [username, setUsername] = useState("");
 		const [profileImage, setProfileImage] = useState("");
+		const [friendRequests, setFriendRequests] = useState<any[]>([]);
+		const [isModalVisible, setIsModalVisible] = useState(false);
+		const [friendsList, setFriendsList] = useState<any[]>([]);
+
 		const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 		
 		useFocusEffect(
 			useCallback(() => {
 				const fetchProfile = async () => {
-				try {
-					// const token = await SecureStore.getItemAsync("userToken");
-					const token =
-						Platform.OS === "web"
-							? localStorage.getItem("userToken")
-							: await SecureStore.getItemAsync("userToken");
+					try {
+						const token =
+							Platform.OS === "web"
+								? localStorage.getItem("userToken")
+								: await SecureStore.getItemAsync("userToken");
 
-					if (!token) {
-						router.replace('/login');
-						return;
+						if (!token) {
+							router.replace('/login');
+							return;
+						}
+
+						const response = await fetch(`${apiUrl}/auth/profil`, {
+							method: "GET",
+							headers: {
+								Authorization: `Bearer ${token}`,
+							},
+						});
+
+						const data = await response.json();
+
+						setUsername(data.username);
+						setProfileImage(data.profileImage);
+
+						const requestsResponse = await fetch(
+							`${apiUrl}/friends/pending`,
+							{
+								method: "GET",
+								headers: {
+									Authorization: `Bearer ${token}`,
+								},
+							}
+						);
+
+						const requestsData = await requestsResponse.json();
+
+						setFriendRequests(requestsData);
+						const friendsResponse = await fetch(
+							`${apiUrl}/friends/list`,
+							{
+								method: 'GET',
+								headers: {
+									Authorization: `Bearer ${token}`,
+								},
+							}
+						);
+						const friendsData = await friendsResponse.json();
+						setFriendsList(friendsData);
+
+					} catch (error) {
+						console.error(error);
 					}
-					
-					const response = await fetch(`${apiUrl}/auth/profil`, {
-					method: "GET",
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-					});
-
-					const data = await response.json();
-
-					setUsername(data.username);
-					setProfileImage(data.profileImage);
-				} catch (error) {
-					console.error(error);
-				}
 				};
 
 				fetchProfile();
@@ -65,11 +94,76 @@ export default function Profile() {
 		router.replace("/login");
 	}
 
+	const handleRequest = async (
+		requestId: string,
+		status: "ACCEPTED" | "REJECTED"
+	) => {
+		const token =
+			Platform.OS === "web"
+				? localStorage.getItem("userToken")
+				: await SecureStore.getItemAsync("userToken");
+
+		if (!token) return;
+
+		await fetch(`${apiUrl}/friends/manage`, {
+			method: "PATCH",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({
+				friendshipId: requestId,
+				status,
+			}),
+		});
+
+		setFriendRequests((prev) => {
+			const updatedRequests = prev.filter((request) => request.id !== requestId);
+
+			if (updatedRequests.length === 0) {
+				DeviceEventEmitter.emit("clearNotification");
+			}
+			return updatedRequests;
+		});
+	};
+
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<ScrollView style={styles.scrollContent}>
 				<View style={styles.header}>
-					<ChevronLeft />
+					<View
+						style={{
+							flexDirection: "row",
+							justifyContent: "space-between",
+							alignItems: "center",
+							marginBottom: 20,
+						}}
+					>
+						<ChevronLeft />
+
+						<TouchableOpacity
+							onPress={() => setIsModalVisible(true)}
+							style={{ position: "relative" }}
+						>
+							<Bell size={24} />
+
+							{friendRequests.length > 0 && (
+								<View
+									style={{
+										position: "absolute",
+										top: 0,
+										right: 0,
+										width: 10,
+										height: 10,
+										borderRadius: 5,
+										backgroundColor: "red",
+									}}
+								/>
+							)}
+						</TouchableOpacity>
+					</View>
+
+					
 
 					<View style={styles.avatarWrapper}>
 						{profileImage ? (
@@ -87,7 +181,7 @@ export default function Profile() {
 					<View style={styles.statsRow}>
 						<ProfileStat value="46" label="playlists" />
 						<ProfileStat value="348" label="liked titles" />
-						<ProfileStat value="24" label="friends" />
+						<ProfileStat value={friendsList.length.toString()} label="friends" />
 					</View>
 
 					<View style={styles.buttonsContainer}>
@@ -98,17 +192,13 @@ export default function Profile() {
 							onPress={() => router.push("/edit-profile")}
 						/>
 						<ProfileActionButton
-							title="Add new friends"
-							isPrimary={false}
-							icon={<UserPlus color='black' />}
-						/>
-						<ProfileActionButton
 							title="Log out"
 							isPrimary={false}
 							icon={<LogOut color='black' />}
 							onPress={() => handleLogout()}
 						/>
 					</View>
+
 					<View style={styles.divider}></View>
 
 					<View style={styles.sectionHeader}>
@@ -149,26 +239,105 @@ export default function Profile() {
 					showsHorizontalScrollIndicator={false}
 					contentContainerStyle={styles.friendsScroll}
 				>
-					<FriendAvatar
-						name="Joëlle"
-						bgColor="#E5F2EE"
-					/>
-					<FriendAvatar
-						name="Antonin"
-						bgColor="#EBE6F3"
-					/>
-					<FriendAvatar
-						name="Octave"
-						bgColor="#FBECEE"
-					/>
-					<FriendAvatar
-						isMore={true}
-						name=""
-						moreCount="+21"
-						bgColor="#FDF0DF"
-					/>
+
+					{friendsList.map((friend) => {
+						const friendUser = friend.sender.username === username
+							? friend.receiver
+							: friend.sender;
+						return (
+							<FriendAvatar
+								key={friend.id}
+								name={friendUser.username}
+								profileImage={friendUser.profileImage}
+								bgColor="#E5F2EE"
+							/>
+						);
+					})}
 				</ScrollView>
 			</ScrollView>
+
+
+			<Modal
+				visible={isModalVisible}
+				animationType="slide"
+				transparent={true}
+			>
+				<View
+					style={{
+						flex: 1,
+						backgroundColor: "rgba(0,0,0,0.5)",
+						justifyContent: "center",
+						padding: 20,
+					}}
+				>
+					<View
+						style={{
+							backgroundColor: "white",
+							borderRadius: 20,
+							padding: 20,
+							maxHeight: "80%",
+						}}
+					>
+						<TouchableOpacity
+							onPress={() => setIsModalVisible(false)}
+							style={{ marginBottom: 20 }}
+						>
+							<X size={24} color="black"/>
+						</TouchableOpacity>
+
+						<View style={styles.sectionHeader}>
+							<Text style={styles.sectionTitle}>
+								Friends request
+							</Text>
+						</View>
+
+						<View style={styles.activityContainer}>
+							{friendRequests.map((request: any) => (
+								<View key={request.id}>
+									<ActivityItem
+										title={request.sender.username}
+										description="Friend request"
+										time=""
+										imageUrl={request.sender.profileImage}
+									/>
+
+									<View
+										style={{
+											flexDirection: "row",
+											gap: 16,
+											marginBottom: 20,
+										}}
+									>
+										<TouchableOpacity
+											onPress={() =>
+												handleRequest(
+													request.id,
+													"ACCEPTED"
+												)
+											}
+										>
+											<Check size={24} color="green"/>
+										</TouchableOpacity>
+
+										<TouchableOpacity
+											onPress={() =>
+												handleRequest(
+													request.id,
+													"REJECTED"
+												)
+											}
+										>
+											<X size={24} color="red"/>
+										</TouchableOpacity>
+									</View>
+								</View>
+							))}
+						</View>
+
+						<View style={styles.divider}></View>
+					</View>
+				</View>
+			</Modal>
 		</SafeAreaView>
 	);
 }

@@ -51,6 +51,8 @@ model User {
   // Music preferences
   favoriteGenres String[]
 
+  sentRequests Friendship[] @relation("SentRequests")
+  receivedRequests Friendship[] @relation("ReceivedRequests")
 
 }
 
@@ -109,3 +111,25 @@ model Vote {
   @@unique([userId, trackId])
 }
 
+<<<<<<< HEAD
+=======
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Friendship {
+  id        String  @id @default(uuid())
+  status    FriendshipStatus @default(PENDING)
+  createdAt DateTime  @default(now())
+
+  sender    User  @relation("SentRequests", fields: [senderId], references: [id])
+  senderId  String
+
+  receiver User @relation("ReceivedRequests", fields: [receiverId], references: [id])
+  receiverId  String
+
+  @@unique([senderId, receiverId])
+}
+>>>>>>> feat/friendship
