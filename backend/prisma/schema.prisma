@@ -49,6 +49,9 @@ model User {
   // Music preferences
   favoriteGenres String[]
 
+  //Live session
+  invitedToSessions LiveSession[]
+
 
 }
 
@@ -103,7 +106,7 @@ model LiveSession {
 }
 
 model LiveSessionTrack {
-	liveSession		LiveSession	@relation(fields: [liveSessionId], references: [id])
+	liveSession		LiveSession	@relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
 	liveSessionId	String
 	track			Track		@relation(fields: [trackId], references: [id])
 	trackId			String
@@ -121,7 +124,7 @@ model Vote {
 	userId	String
 
 	// Pour quel morceau et quelle session
-	liveSessionTrack	LiveSessionTrack	@relation(fields: [liveSessionId, trackId], references: [liveSessionId, trackId])
+	liveSessionTrack	LiveSessionTrack	@relation(fields: [liveSessionId, trackId], references: [liveSessionId, trackId], onDelete: Cascade)
 	liveSessionId		String
 	trackId				String
 
