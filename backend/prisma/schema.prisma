@@ -111,8 +111,6 @@ model Vote {
   @@unique([userId, trackId])
 }
 
-<<<<<<< HEAD
-=======
 enum FriendshipStatus {
   PENDING
   ACCEPTED
@@ -132,4 +130,3 @@ model Friendship {
 
   @@unique([senderId, receiverId])
 }
->>>>>>> feat/friendship

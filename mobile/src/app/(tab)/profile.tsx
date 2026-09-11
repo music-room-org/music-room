@@ -57,7 +57,10 @@ export default function Profile() {
 
 						const requestsData = await requestsResponse.json();
 
-						setFriendRequests(requestsData);
+						if (requestsResponse.ok) {
+							setFriendRequests(requestsData);
+						}
+
 						const friendsResponse = await fetch(
 							`${apiUrl}/friends/list`,
 							{
@@ -67,8 +70,11 @@ export default function Profile() {
 								},
 							}
 						);
-						const friendsData = await friendsResponse.json();
-						setFriendsList(friendsData);
+
+						if (friendsResponse.ok) {
+							const friendsData = await friendsResponse.json();
+							setFriendsList(friendsData);
+						}
 
 					} catch (error) {
 						console.error(error);
