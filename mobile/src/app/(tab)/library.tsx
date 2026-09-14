@@ -1,10 +1,10 @@
 import { View, ScrollView, Text, TouchableOpacity, StyleSheet, Platform, Modal, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, PlusCircle } from "lucide-react-native";
+import { Search, PlusCircle, List, User } from "lucide-react-native";
 import { COLORS, FONTS } from "@/constants";
 import { LibraryPlaylistItem } from "@/components";
 import { useState, useCallback } from "react";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRoute, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 
 async function getToken() {
@@ -15,11 +15,12 @@ async function getToken() {
 
 export default function Library() {
 	
+	const router = useRouter();
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 	const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
 	const [newPlaylistName, setNewPlaylistName] = useState("");
 	const [myPlaylists, setMyPlaylists] = useState([]);
-
+	const [isTypeMenuVisible, setIsTypeMenuVisible] = useState(false);
 
 	const handleCreatePlaylist = async () => {
 		try {
@@ -28,7 +29,7 @@ export default function Library() {
 			if (!token)
 				return;
 
-			await fetch(`${apiUrl}/playlists`, {
+			const response = await fetch(`${apiUrl}/playlists`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -39,8 +40,12 @@ export default function Library() {
 				}),
 			});
 
+			const newPlaylist = await response.json();
+
 			setIsCreateModalVisible(false);
 			setNewPlaylistName("");
+
+			router.push(`/playlist/${newPlaylist.id}`);
 		} catch (error) {
 			console.error(error);
 		}
@@ -55,6 +60,7 @@ export default function Library() {
 					if (!token)
 						return;
 
+					console.log("TOKEN:", token);
 					const response = await fetch(`${apiUrl}/playlists/mine`, {
 						method: "GET",
 						headers: {
@@ -63,6 +69,7 @@ export default function Library() {
 					});
 
 					const data = await response.json();
+					console.log("PLAYLISTS:", data);
 					setMyPlaylists(data);
 				} catch (error) {
 					console.error(error);
@@ -84,7 +91,7 @@ export default function Library() {
 							<TouchableOpacity>
 								<Search size={26} color={COLORS.textMuted}/>
 							</TouchableOpacity>
-							<TouchableOpacity style={styles.actionIcon} onPress={() => setIsCreateModalVisible(true)}>
+							<TouchableOpacity style={styles.actionIcon} onPress={() => setIsTypeMenuVisible(true)}>
 								<PlusCircle size={26} color={COLORS.textMuted}/>
 							</TouchableOpacity>
 						</View>
@@ -93,15 +100,63 @@ export default function Library() {
 				</View>
 				<View style={styles.listContainer}>
 					{myPlaylists.map((playlist: any) => (
-						<LibraryPlaylistItem
+
+						<TouchableOpacity
 							key={playlist.id}
-							title={playlist.name}
-							author="me"
-							imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-						/>
+							onPress={() => router.push(`/playlist/${playlist.id}`)}
+						>
+							<LibraryPlaylistItem
+								title={playlist.name}
+								author="me"
+								imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
+							/>
+						</TouchableOpacity>
+
 					))}
 				</View>
 			</ScrollView>
+			
+			<Modal
+				visible={isTypeMenuVisible}
+				transparent={true}
+				animationType="slide"
+				onRequestClose={() => setIsTypeMenuVisible(false)}
+			>
+				<View style={styles.typeMenuOverlay}>
+					<View style={styles.typeMenu}>
+						<TouchableOpacity
+							style={styles.typeMenuItem}
+							onPress={() => {
+								setIsTypeMenuVisible(false);
+								setIsCreateModalVisible(true);
+							}}
+						>
+							<List size={24} color={COLORS.textPrimary} />
+								<Text style={styles.typeMenuText}>
+									Playlist classique
+								</Text>
+						</TouchableOpacity>
+
+						<TouchableOpacity
+							style={styles.typeMenuItem}
+							onPress={() => {
+								setIsTypeMenuVisible(false);
+								setIsCreateModalVisible(true);
+							}}
+						>
+							<User size={24} color={COLORS.textPrimary} />
+								<Text style={styles.typeMenuText}>
+									Playlist collaborative
+								</Text>
+						</TouchableOpacity>
+					</View>
+
+				</View>
+
+
+			</Modal>
+
+
 			<Modal
 				visible={isCreateModalVisible}
 				transparent={true}
@@ -157,6 +212,7 @@ export default function Library() {
 					</View>
 				</View>
 			</Modal>
+
 		</SafeAreaView>
 	)
 }
@@ -199,6 +255,32 @@ const styles = StyleSheet.create({
 		borderRadius: 2,
 		marginTop: 16
 	},
+	typeMenuOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "flex-end",
+    },
+
+    typeMenu: {
+        backgroundColor: COLORS.background,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 24,
+        paddingBottom: 40,
+    },
+
+    typeMenuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 18,
+    },
+
+    typeMenuText: {
+        marginLeft: 16,
+        fontFamily: FONTS.semiBold,
+        fontSize: 17,
+        color: COLORS.textPrimary,
+    },
 	listContainer: {
 		marginTop: 8
 	}

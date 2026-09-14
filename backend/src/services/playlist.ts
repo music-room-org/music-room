@@ -45,3 +45,13 @@ export async function getUserPublicPlaylists(ownerId: string) {
     },
   });
 }
+
+export async function addTrackToPlaylist(playlistId: string, trackId: string) {
+  return prisma.playlistTrack.create({
+    data: {
+      playlistId,
+      trackId,
+      position: 0,
+    },
+  });
+}

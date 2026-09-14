@@ -6,7 +6,6 @@ import { COLORS, FONTS } from "@/constants";
 import { CustomInput, PrimaryButton, ChangePasswordModal } from "@/components";
 import * as SecureStore from 'expo-secure-store';
 import { useState, useEffect } from "react";
-import * as ImagePicker from "expo-image-picker";
 
 
 export default function EditProfile() {
@@ -103,6 +102,29 @@ export default function EditProfile() {
 	};
 
 	const pickImage = async () => {
+
+		if (Platform.OS === "web") {
+			const input = document.createElement("input");
+			input.type = "file";
+			input.accept = "image/*";
+
+			input.onchange = (event) => {
+				const file = (event.target as HTMLInputElement).files?.[0];
+
+				if (!file) return;
+
+				const reader = new FileReader();
+				reader.onload = () => {
+					setProfileImage(reader.result as string);
+				};
+				reader.readAsDataURL(file);
+			};
+			input.click();
+			return;
+		}
+
+		const ImagePicker = await import("expo-image-picker");
+
 		const result = await ImagePicker.launchImageLibraryAsync({
 			allowsEditing: true,
 			aspect: [1, 1],
@@ -129,7 +151,7 @@ export default function EditProfile() {
 				<TouchableOpacity onPress={() => pickImage()}>
 					<View style={styles.avatarContainer}>
 						<View style={styles.avatarCircle}>
-							{profileImage && (
+							{Boolean(profileImage) && (
 								<Image
 									source={{ uri: profileImage }}
 									style={{

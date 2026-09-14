@@ -1,50 +1,59 @@
 import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  Param,
-  UseGuards,
-  Request,
+	Controller,
+	Post,
+	Get,
+	Body,
+	Param,
+	UseGuards,
+	Request,
 } from '@nestjs/common';
 import {
-  createPlaylist,
-  getPublicPlaylists,
-  getMyPlaylists,
-  getPlaylistById,
-  getUserPublicPlaylists,
+	createPlaylist,
+	getPublicPlaylists,
+	getMyPlaylists,
+	getPlaylistById,
+	getUserPublicPlaylists,
+	addTrackToPlaylist
 } from './services/playlist';
 import { Guard } from './security/guard';
 
 @Controller('playlists')
 export class PlaylistController {
-  @UseGuards(Guard)
-  @Post()
-  async create(@Body() body: any, @Request() request: any) {
-    return await createPlaylist(body.name, request.userId);
-  }
+	@UseGuards(Guard)
+	@Post()
+	async create(@Body() body: any, @Request() request: any) {
+		return await createPlaylist(body.name, request.userId);
+	}
 
-  @Get()
-  async findAll() {
-    return await getPublicPlaylists();
-  }
+	@Get()
+	async findAll() {
+		return await getPublicPlaylists();
+	}
 
-  @UseGuards(Guard)
-  @Get('mine')
-  async findMine(@Request() request: any) {
-    return await getMyPlaylists(request.userId);
-  }
+	@Post(':id/tracks')
+	async addTrack(
+		@Param('id') playlistId: string,
+		@Body('trackId') trackId: string,
+	) {
+		return addTrackToPlaylist(playlistId, trackId);
+	}
 
-  // GET /playlists/user/:ownerId → playlists publiques d'un autre user
-  @UseGuards(Guard)
-  @Get('user/:ownerId')
-  async findUserPlaylists(@Param('ownerId') ownerId: string) {
-    return await getUserPublicPlaylists(ownerId);
-  }
+	@UseGuards(Guard)
+	@Get('mine')
+	async findMine(@Request() request: any) {
+		return await getMyPlaylists(request.userId);
+	}
 
-  @UseGuards(Guard)
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return await getPlaylistById(id);
-  }
+	// GET /playlists/user/:ownerId → playlists publiques d'un autre user
+	@UseGuards(Guard)
+	@Get('user/:ownerId')
+	async findUserPlaylists(@Param('ownerId') ownerId: string) {
+		return await getUserPublicPlaylists(ownerId);
+	}
+
+	@UseGuards(Guard)
+	@Get(':id')
+	async findOne(@Param('id') id: string) {
+		return await getPlaylistById(id);
+	}
 }
