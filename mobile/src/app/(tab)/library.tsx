@@ -108,7 +108,7 @@ export default function Library() {
 							<LibraryPlaylistItem
 								title={playlist.name}
 								author="me"
-								imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
+								imageUrl={playlist.imageUrl || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png"}
 							/>
 						</TouchableOpacity>
 
