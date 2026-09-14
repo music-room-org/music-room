@@ -17,6 +17,7 @@ export class PlayerService implements OnModuleInit, OnModuleDestroy {
   private readonly tempDir = path.resolve(process.cwd(), 'temp_audio');
   private activeDownloads = new Map<string, Promise<string>>();
   private fileLastAccessed = new Map<string, number>();
+  private activeStreams = new Map<string, number>();
   private cleanupTimer: NodeJS.Timeout | null = null;
 
   async onModuleInit() {
@@ -53,6 +54,7 @@ export class PlayerService implements OnModuleInit, OnModuleDestroy {
         }
       }
       this.fileLastAccessed.clear();
+      this.activeStreams.clear();
       this.logger.log('Temporary audio directory cleaned up.');
     } catch (err: any) {
       this.logger.error(`Error cleaning up temp directory: ${err.message}`);
@@ -71,9 +73,10 @@ export class PlayerService implements OnModuleInit, OnModuleDestroy {
 
         const videoId = file.replace('.mp3', '');
         const lastAccess = this.fileLastAccessed.get(videoId);
+        const activeCount = this.activeStreams.get(videoId) || 0;
 
-        // If file has not been accessed in the last 30 minutes
-        if (!lastAccess || now - lastAccess > FILE_CACHE_TTL_MS) {
+        // If file has not been accessed in the last 30 minutes and no active streams
+        if (activeCount === 0 && (!lastAccess || now - lastAccess > FILE_CACHE_TTL_MS)) {
           const filePath = path.join(this.tempDir, file);
           await fs.promises.unlink(filePath).catch(() => {});
           this.fileLastAccessed.delete(videoId);
@@ -149,6 +152,26 @@ export class PlayerService implements OnModuleInit, OnModuleDestroy {
     const filePath = await this.getOrDownloadAudio(videoId);
     this.fileLastAccessed.set(videoId, Date.now());
 
+    // Track active connection
+    const currentStreams = (this.activeStreams.get(videoId) || 0) + 1;
+    this.activeStreams.set(videoId, currentStreams);
+
+    let streamDone = false;
+    const onStreamEnd = () => {
+      if (streamDone) return;
+      streamDone = true;
+      const remaining = (this.activeStreams.get(videoId) || 1) - 1;
+      if (remaining <= 0) {
+        this.activeStreams.delete(videoId);
+      } else {
+        this.activeStreams.set(videoId, remaining);
+      }
+    };
+
+    res.on('close', onStreamEnd);
+    res.on('finish', onStreamEnd);
+    res.on('error', onStreamEnd);
+
     const stat = await fs.promises.stat(filePath);
     const fileSize = stat.size;
 
@@ -188,13 +211,25 @@ export class PlayerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Manually delete audio file if needed.
+   * Delete audio file safely (only if no other active stream / recent stream by other users is using it).
    */
   async deleteAudioFile(videoId: string): Promise<boolean> {
+    const activeStreamsCount = this.activeStreams.get(videoId) || 0;
+    const lastAccess = this.fileLastAccessed.get(videoId);
+
+    // If another user or stream is actively playing or requested chunks in the last 5 seconds, keep the file
+    if (activeStreamsCount > 0 || (lastAccess && Date.now() - lastAccess < 5000)) {
+      this.logger.log(`Delete skipped for ${videoId}: other active listener or recent stream detected.`);
+      return false;
+    }
+
     const filePath = path.join(this.tempDir, `${videoId}.mp3`);
     this.fileLastAccessed.delete(videoId);
+    this.activeStreams.delete(videoId);
+
     if (fs.existsSync(filePath)) {
-      await fs.promises.unlink(filePath);
+      await fs.promises.unlink(filePath).catch(() => {});
+      this.logger.log(`Deleted finished audio file: ${filePath}`);
       return true;
     }
     return false;
