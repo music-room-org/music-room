@@ -2,7 +2,11 @@ import { SubscribeMessage, WebSocketGateway, WebSocketServer, OnGatewayConnectio
 import { Server, Socket } from 'socket.io';
 import * as jwt from 'jsonwebtoken';
 
-@WebSocketGateway()
+@WebSocketGateway({
+	cors: {
+		origin: "http://localhost:8081",
+	},
+})
 export class FriendsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;

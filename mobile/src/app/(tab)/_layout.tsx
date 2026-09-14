@@ -55,6 +55,14 @@ function CustomTabBar({ state, descriptors, navigation, hasNotification }: Botto
 	);
 }
 
+async function getToken() {
+	if (Platform.OS === "web") {
+		return localStorage.getItem("userToken");
+	}
+
+	return await SecureStore.getItemAsync("userToken");
+}
+
 export default function TabsLayout() {
 
 	const [hasNotification, setHasNotification] = useState(false);
@@ -63,7 +71,7 @@ export default function TabsLayout() {
 		let socket: ReturnType<typeof io>;
 
 		const connectSocket = async () => {
-			const token = await SecureStore.getItemAsync("userToken");
+			const token = await getToken();
 
 			if (!token)
 				return;

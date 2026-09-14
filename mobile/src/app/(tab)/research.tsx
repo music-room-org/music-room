@@ -6,6 +6,14 @@ import * as SecureStore from "expo-secure-store";
 import { COLORS, FONTS } from "@/constants";
 import { SearchBar, PrimaryButton } from "@/components";
 
+async function getToken() {
+	if (Platform.OS === "web") {
+		return localStorage.getItem("userToken");
+	}
+
+	return await SecureStore.getItemAsync("userToken");
+}
+
 export default function Research() {
 	const [activeTab, setActiveTab] = useState('Titles');
 	const [searchQuery, setSearchQuery] = useState('');
@@ -13,7 +21,7 @@ export default function Research() {
 	const [pendingRequests, setPendingRequests] = useState<string[]>([]);
 
 	const sendRequest = async (targetId: string) => {
-		const token = await SecureStore.getItemAsync("userToken");
+		const token = await getToken();
 
 		if (!token) return;
 
@@ -45,8 +53,7 @@ export default function Research() {
 				return;
 			}
 
-			const token = await SecureStore.getItemAsync("userToken");
-
+			const token = await getToken();
 			if (!token) return;
 
 			const apiUrl =

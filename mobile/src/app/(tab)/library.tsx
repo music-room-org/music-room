@@ -7,6 +7,12 @@ import { useState, useCallback } from "react";
 import { useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 
+async function getToken() {
+	if (Platform.OS === "web")
+		return localStorage.getItem("userToken");
+	return await SecureStore.getItemAsync("userToken");
+}
+
 export default function Library() {
 	
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
@@ -14,9 +20,10 @@ export default function Library() {
 	const [newPlaylistName, setNewPlaylistName] = useState("");
 	const [myPlaylists, setMyPlaylists] = useState([]);
 
+
 	const handleCreatePlaylist = async () => {
 		try {
-			const token = await SecureStore.getItemAsync("userToken");
+			const token = await getToken();
 
 			if (!token)
 				return;
@@ -43,7 +50,7 @@ export default function Library() {
 		useCallback(() => {
 			const fetchPlaylists = async () => {
 				try {
-					const token = await SecureStore.getItemAsync("userToken");
+					const token = await getToken();
 
 					if (!token)
 						return;
@@ -123,6 +130,7 @@ export default function Library() {
 							style={{
 								borderWidth: 1,
 								borderColor: "#ddd",
+								color: "#777373",
 								borderRadius: 8,
 								padding: 12,
 								marginBottom: 16,
