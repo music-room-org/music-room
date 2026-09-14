@@ -28,26 +28,6 @@ npm i
 ## Ressources
 ### [Notion](https://app.notion.com/p/TODO-3b22167339ce804faff4d1cebadbad4d?source=copy_link)
 ### [Repo](https://github.com/music-room-org/music-room)
-### Figma (a créer)
+### [Figma](https://www.figma.com/design/25jhgDsFrECrDYXdaVljdu/Music-room?node-id=0-1&t=k5moFDsU7FUuxbG9-1)
+### [Intra subject](https://cdn.intra.42.fr/pdf/pdf/210122/en.subject.pdf)
 
-*****************************************************************************************************
-# Backend
-
-## Lancer le projet
-
-```bash
-cd backend
-npm install
-npx prisma generate
-npm run start:dev
-```
-
-Le serveur démarre sur http://localhost:3000
-
-## Tester
-
-```bash
-curl http://localhost:3000/health
-```
-
-Réponse attendue : `{"status":"ok"}`

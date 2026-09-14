@@ -1,13 +1,69 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Image, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight, LogOut } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { ProfileStat, ProfileActionButton, ActivityItem, FriendAvatar } from "@/components";
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 
 export default function Profile() {
 
 	const router = useRouter();
+		const [username, setUsername] = useState("");
+		const [profileImage, setProfileImage] = useState("");
+		const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+		
+		useFocusEffect(
+			useCallback(() => {
+				const fetchProfile = async () => {
+				try {
+					// const token = await SecureStore.getItemAsync("userToken");
+					const token =
+						Platform.OS === "web"
+							? localStorage.getItem("userToken")
+							: await SecureStore.getItemAsync("userToken");
+
+					if (!token) {
+						router.replace('/login');
+						return;
+					}
+					
+					const response = await fetch(`${apiUrl}/auth/profil`, {
+					method: "GET",
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+					});
+
+					const data = await response.json();
+
+					setUsername(data.username);
+					setProfileImage(data.profileImage);
+				} catch (error) {
+					console.error(error);
+				}
+				};
+
+				fetchProfile();
+			}, [])
+		);
+
+	// async function handleLogout() {
+	// 	await SecureStore.deleteItemAsync('userToken');
+	// 	router.replace('/login');
+	// }
+
+	async function handleLogout() {
+		if (Platform.OS === "web") {
+			localStorage.removeItem("userToken");
+		} else {
+			await SecureStore.deleteItemAsync("userToken");
+		}
+
+		router.replace("/login");
+	}
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -16,14 +72,17 @@ export default function Profile() {
 					<ChevronLeft />
 
 					<View style={styles.avatarWrapper}>
-						<View style={styles.avatar} />
-						<View style={styles.cameraBadge}>
-							<Camera size={16} color={COLORS.primary} />
+						{profileImage ? (
+							<Image
+							source={{ uri: profileImage }}
+							style={styles.avatar}
+							/>
+						) : (
+							<View style={styles.avatar} />
+						)}
 						</View>
-					</View>
 
-					<Text style={styles.nameTitle}>Faustoche</Text>
-					<Text style={styles.handleText}>@faustoche</Text>
+					<Text style={styles.handleText}>@{username}</Text>
 
 					<View style={styles.statsRow}>
 						<ProfileStat value="46" label="playlists" />
@@ -42,6 +101,12 @@ export default function Profile() {
 							title="Add new friends"
 							isPrimary={false}
 							icon={<UserPlus color='black' />}
+						/>
+						<ProfileActionButton
+							title="Log out"
+							isPrimary={false}
+							icon={<LogOut color='black' />}
+							onPress={() => handleLogout()}
 						/>
 					</View>
 					<View style={styles.divider}></View>
