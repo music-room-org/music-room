@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -7,16 +7,35 @@ import type { Response } from 'express';
 
 const execAsync = promisify(exec);
 
+// Cache TTL: Keep audio files on disk for 30 minutes of inactivity before cleaning up
+const FILE_CACHE_TTL_MS = 30 * 60 * 1000;
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
 @Injectable()
-export class PlayerService implements OnModuleInit {
+export class PlayerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PlayerService.name);
   private readonly tempDir = path.resolve(process.cwd(), 'temp_audio');
   private activeDownloads = new Map<string, Promise<string>>();
-  private activeStreams = new Map<string, number>();
+  private fileLastAccessed = new Map<string, number>();
+  private cleanupTimer: NodeJS.Timeout | null = null;
 
   async onModuleInit() {
     await this.ensureTempDirExists();
     await this.cleanupAllTempFiles();
+
+    // Start background cleanup timer
+    this.cleanupTimer = setInterval(() => {
+      this.sweepExpiredFiles().catch((err) => {
+        this.logger.error(`Error during sweep of expired audio files: ${err.message}`);
+      });
+    }, CLEANUP_INTERVAL_MS);
+  }
+
+  onModuleDestroy() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
   }
 
   private async ensureTempDirExists() {
@@ -33,9 +52,36 @@ export class PlayerService implements OnModuleInit {
           await fs.promises.unlink(path.join(this.tempDir, file)).catch(() => {});
         }
       }
+      this.fileLastAccessed.clear();
       this.logger.log('Temporary audio directory cleaned up.');
     } catch (err: any) {
       this.logger.error(`Error cleaning up temp directory: ${err.message}`);
+    }
+  }
+
+  /**
+   * Sweeps and deletes files that have not been accessed for more than FILE_CACHE_TTL_MS.
+   */
+  private async sweepExpiredFiles() {
+    const now = Date.now();
+    try {
+      const files = await fs.promises.readdir(this.tempDir);
+      for (const file of files) {
+        if (!file.endsWith('.mp3')) continue;
+
+        const videoId = file.replace('.mp3', '');
+        const lastAccess = this.fileLastAccessed.get(videoId);
+
+        // If file has not been accessed in the last 30 minutes
+        if (!lastAccess || now - lastAccess > FILE_CACHE_TTL_MS) {
+          const filePath = path.join(this.tempDir, file);
+          await fs.promises.unlink(filePath).catch(() => {});
+          this.fileLastAccessed.delete(videoId);
+          this.logger.log(`Expired cached audio file deleted: ${file}`);
+        }
+      }
+    } catch (err: any) {
+      this.logger.error(`Error sweeping expired files: ${err.message}`);
     }
   }
 
@@ -52,8 +98,9 @@ export class PlayerService implements OnModuleInit {
     await this.ensureTempDirExists();
     const filePath = path.join(this.tempDir, `${videoId}.mp3`);
 
-    // If file already exists, return its path
+    // If file already exists, update access time and return its path
     if (fs.existsSync(filePath)) {
+      this.fileLastAccessed.set(videoId, Date.now());
       return filePath;
     }
 
@@ -76,6 +123,7 @@ export class PlayerService implements OnModuleInit {
           throw new Error(`Audio file was not created at expected path: ${filePath}`);
         }
 
+        this.fileLastAccessed.set(videoId, Date.now());
         this.logger.log(`Audio successfully downloaded for videoId ${videoId}`);
         return filePath;
       } catch (error: any) {
@@ -96,43 +144,13 @@ export class PlayerService implements OnModuleInit {
 
   /**
    * Streams audio file to HTTP response with HTTP 206 Range support.
-   * Automatically deletes the temporary audio file when all active streams finish.
    */
   async streamAudioFile(videoId: string, reqHeaders: Record<string, string | string[] | undefined>, res: Response) {
     const filePath = await this.getOrDownloadAudio(videoId);
+    this.fileLastAccessed.set(videoId, Date.now());
+
     const stat = await fs.promises.stat(filePath);
     const fileSize = stat.size;
-
-    // Track active streaming listeners
-    const currentStreams = (this.activeStreams.get(videoId) || 0) + 1;
-    this.activeStreams.set(videoId, currentStreams);
-
-    let streamCleanedUp = false;
-    const cleanupStream = async () => {
-      if (streamCleanedUp) return;
-      streamCleanedUp = true;
-
-      const remainingStreams = (this.activeStreams.get(videoId) || 1) - 1;
-      if (remainingStreams <= 0) {
-        this.activeStreams.delete(videoId);
-        this.logger.log(`No active streams remaining for ${videoId}. Cleaning up temporary file...`);
-        // Slight delay to allow any pending range requests / sockets to complete
-        setTimeout(async () => {
-          if (!this.activeStreams.has(videoId) && fs.existsSync(filePath)) {
-            await fs.promises.unlink(filePath).catch((err) => {
-              this.logger.warn(`Failed to unlink ${filePath}: ${err.message}`);
-            });
-            this.logger.log(`Deleted temporary audio file: ${filePath}`);
-          }
-        }, 1000);
-      } else {
-        this.activeStreams.set(videoId, remainingStreams);
-      }
-    };
-
-    res.on('close', cleanupStream);
-    res.on('finish', cleanupStream);
-    res.on('error', cleanupStream);
 
     const range = reqHeaders.range;
     if (range && typeof range === 'string') {
@@ -153,7 +171,7 @@ export class PlayerService implements OnModuleInit {
         'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
         'Content-Type': 'audio/mpeg',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Cache-Control': 'public, max-age=3600',
       });
 
       fileStream.pipe(res);
@@ -162,7 +180,7 @@ export class PlayerService implements OnModuleInit {
         'Content-Length': fileSize,
         'Content-Type': 'audio/mpeg',
         'Accept-Ranges': 'bytes',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Cache-Control': 'public, max-age=3600',
       });
 
       fs.createReadStream(filePath).pipe(res);
@@ -174,6 +192,7 @@ export class PlayerService implements OnModuleInit {
    */
   async deleteAudioFile(videoId: string): Promise<boolean> {
     const filePath = path.join(this.tempDir, `${videoId}.mp3`);
+    this.fileLastAccessed.delete(videoId);
     if (fs.existsSync(filePath)) {
       await fs.promises.unlink(filePath);
       return true;
