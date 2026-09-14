@@ -38,8 +38,10 @@ export default function Research() {
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<ScrollView
-				style={styles.scrollContent}
+				style={styles.scrollView}
+				contentContainerStyle={styles.scrollContent}
 				showsVerticalScrollIndicator={false}
+				keyboardShouldPersistTaps="handled"
 			>
 				<SearchBar
 					value={searchQuery}
@@ -135,10 +137,13 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: COLORS.background
 	},
+	scrollView: {
+		flex: 1,
+	},
 	scrollContent: {
 		paddingHorizontal: 24,
 		paddingTop: 20,
-		paddingBottom: 120
+		paddingBottom: 170,
 	},
 	loaderContainer: {
 		marginTop: 32,
