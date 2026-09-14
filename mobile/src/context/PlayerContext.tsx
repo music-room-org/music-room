@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { API_BASE_URL } from '@/constants/api';
 
 export interface Track {
@@ -31,13 +31,14 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 let createAudioPlayer: any = null;
 try {
   createAudioPlayer = require('expo-audio').createAudioPlayer;
-} catch (e) {
+} catch {
   // Ignored - fallback to HTML5 Web Audio if native module is absent
 }
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  const [nativePlayer, setNativePlayer] = useState<any>(null);
-  const [webSound, setWebSound] = useState<HTMLAudioElement | null>(null);
+  const nativePlayerRef = useRef<any>(null);
+  const webSoundRef = useRef<HTMLAudioElement | null>(null);
+
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,18 +46,40 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [durationMillis, setDurationMillis] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const stopTrack = useCallback(async () => {
+    if (nativePlayerRef.current) {
+      try {
+        nativePlayerRef.current.pause();
+        nativePlayerRef.current.remove?.();
+      } catch {}
+      nativePlayerRef.current = null;
+    }
+    if (webSoundRef.current) {
+      webSoundRef.current.pause();
+      webSoundRef.current = null;
+    }
+    setCurrentTrack(null);
+    setIsPlaying(false);
+    setPositionMillis(0);
+    setDurationMillis(0);
+    setIsModalOpen(false);
+  }, []);
+
   useEffect(() => {
     return () => {
       stopTrack();
     };
-  }, []);
+  }, [stopTrack]);
 
   // Continuous position & duration updater while playing
   useEffect(() => {
-    let interval: any = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     if (isPlaying) {
       interval = setInterval(() => {
+        const nativePlayer = nativePlayerRef.current;
+        const webSound = webSoundRef.current;
+
         if (nativePlayer) {
           if (typeof nativePlayer.currentTime === 'number' && !isNaN(nativePlayer.currentTime)) {
             setPositionMillis(nativePlayer.currentTime * 1000);
@@ -78,7 +101,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPlaying, nativePlayer, webSound]);
+  }, [isPlaying]);
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
@@ -91,16 +114,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setDurationMillis(0);
 
       // Stop existing playback
-      if (nativePlayer) {
+      if (nativePlayerRef.current) {
         try {
-          nativePlayer.pause();
-          nativePlayer.remove?.();
-        } catch (e) {}
-        setNativePlayer(null);
+          nativePlayerRef.current.pause();
+          nativePlayerRef.current.remove?.();
+        } catch {}
+        nativePlayerRef.current = null;
       }
-      if (webSound) {
-        webSound.pause();
-        setWebSound(null);
+      if (webSoundRef.current) {
+        webSoundRef.current.pause();
+        webSoundRef.current = null;
       }
 
       const streamUrl = `${API_BASE_URL}/player/stream/${track.id}`;
@@ -120,7 +143,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           });
 
           player.play();
-          setNativePlayer(player);
+          nativePlayerRef.current = player;
           setIsPlaying(true);
           setIsLoading(false);
           return;
@@ -152,7 +175,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           setPositionMillis(0);
         };
 
-        setWebSound(audio);
+        webSoundRef.current = audio;
         return;
       }
 
@@ -166,6 +189,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
 
   const togglePlayPause = async () => {
+    const nativePlayer = nativePlayerRef.current;
+    const webSound = webSoundRef.current;
+
     if (nativePlayer) {
       if (isPlaying) {
         nativePlayer.pause();
@@ -186,6 +212,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
 
   const seekTo = async (positionMs: number) => {
+    const nativePlayer = nativePlayerRef.current;
+    const webSound = webSoundRef.current;
+
     if (nativePlayer) {
       nativePlayer.seekTo?.(positionMs / 1000);
       setPositionMillis(positionMs);
@@ -198,25 +227,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const seekBy = async (offsetMs: number) => {
     const target = Math.max(0, Math.min(durationMillis || 300000, positionMillis + offsetMs));
     await seekTo(target);
-  };
-
-  const stopTrack = async () => {
-    if (nativePlayer) {
-      try {
-        nativePlayer.pause();
-        nativePlayer.remove?.();
-      } catch (e) {}
-      setNativePlayer(null);
-    }
-    if (webSound) {
-      webSound.pause();
-      setWebSound(null);
-    }
-    setCurrentTrack(null);
-    setIsPlaying(false);
-    setPositionMillis(0);
-    setDurationMillis(0);
-    setIsModalOpen(false);
   };
 
   return (
