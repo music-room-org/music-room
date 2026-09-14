@@ -1,77 +1,90 @@
-import { PrismaClient } from '@prisma/client';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
-const prisma = new PrismaClient();
+@Injectable()
+export class LiveSessionService {
+  constructor(private readonly prisma: PrismaService) {}
 
-export async function deleteSessionTrack(SessionId: string, TrackId: string) {
-	await prisma.liveSessionTrack.delete({
-		where: {
-			liveSessionId_trackId: {
-				liveSessionId: SessionId,
-				trackId: TrackId
-			},
-		},
-	});
-}
+  async createLiveSession(name: string, ownerId: string) {
+    const host = await this.prisma.user.findUnique({ where: { id: ownerId } });
+    if (!host) {
+      throw new NotFoundException('Host user not found');
+    }
 
-export async function createLiveSession(name: string, ownerId: string) {
-	const host = await prisma.user.findUnique({ where: { id: ownerId } });
-	if (!host) {
-		throw new Error('Host user not found');
-	}
+    return this.prisma.liveSession.create({
+      data: {
+        name,
+        hostUserId: ownerId,
+        invitedUsers: {
+          connect: { id: ownerId },
+        },
+      },
+    });
+  }
 
-	return prisma.liveSession.create({
-		data: {
-			name,
-			hostUserId: ownerId,
-			invitedUsers: {
-				connect: { id: ownerId },
-			},
-		},
-	});
-}
+  async inviteUser(sessionId: string, userId: string) {
+    return this.prisma.liveSession.update({
+      where: { id: sessionId },
+      data: {
+        invitedUsers: {
+          connect: { id: userId },
+        },
+      },
+    });
+  }
 
+  async voteForTrack(sessionId: string, trackId: string, userId: string) {
+    try {
+      return await this.prisma.vote.create({
+        data: {
+          liveSessionId: sessionId,
+          trackId,
+          userId,
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new BadRequestException('User has already voted for this track');
+      }
+      throw err;
+    }
+  }
 
-export async function getNextTrack(SessionId: string) {
-	const tracks = await prisma.liveSessionTrack.findMany({
-		where: { liveSessionId: SessionId },
-		include: {
-			track: true,
-			_count: { select: { votes: true } },
-		},
-	});
+  async getNextTrack(sessionId: string) {
+    const tracks = await this.prisma.liveSessionTrack.findMany({
+      where: { liveSessionId: sessionId },
+      include: {
+        track: true,
+        _count: { select: { votes: true } },
+      },
+    });
 
-	if (tracks.length === 0) return null;
+    if (tracks.length === 0) return null;
 
-	return tracks.sort((a, b) => {
-		const voteDiff = b._count.votes - a._count.votes;
-		if (voteDiff !== 0) return voteDiff;
-		return a.addedAt.getTime() - b.addedAt.getTime();
-	})[0];
-}
+    return tracks.sort((a, b) => {
+      const voteDiff = b._count.votes - a._count.votes;
+      if (voteDiff !== 0) return voteDiff;
+      return a.addedAt.getTime() - b.addedAt.getTime();
+    })[0];
+  }
 
-export async function voteForTrack(SessionId: string, TrackId: string, userId: string) {
-	await prisma.vote.create({
-		data: {
-			liveSessionId: SessionId,
-			trackId: TrackId,
-			userId: userId
-		},
-	});
-}
+  async deleteSessionTrack(sessionId: string, trackId: string) {
+    await this.prisma.liveSessionTrack.delete({
+      where: {
+        liveSessionId_trackId: {
+          liveSessionId: sessionId,
+          trackId,
+        },
+      },
+    });
+  }
 
-export async function inviteUser(SessionId: string, userId: string) {
-	return prisma.liveSession.update({
-		where: { id: SessionId },
-		data: {
-			invitedUsers: {
-				connect: { id: userId },
-			},
-		},
-	});
-}
+  async endLiveSession(sessionId: string) {
+    await this.prisma.liveSession.delete({ where: { id: sessionId } });
+  }
 
-
-export async function endLiveSession(SessionId: string) {
-	await prisma.vote.deleteMany({ where: { liveSessionId: SessionId } });
-	await prisma.liveSession.delete({ where: { id: SessionId } });
+  async getSessionById(sessionId: string) {
+	return await this.prisma.liveSession.findUnique({ where: {id: sessionId } });
+  })
 }
