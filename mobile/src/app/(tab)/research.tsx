@@ -2,31 +2,39 @@ import { View, ScrollView, Text, ActivityIndicator, StyleSheet } from "react-nat
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
 import { COLORS, FONTS, API_BASE_URL } from "@/constants";
-import { SearchBar, CategoryTabs, TrackListItem, PlaylistItem } from "@/components";
+import { SearchBar, CategoryTabs, TrackListItem, PlaylistItem, ArtistListItem, ArtistItem } from "@/components";
 import { usePlayer, Track } from "@/context/PlayerContext";
 
 export default function Research() {
 	const [activeTab, setActiveTab] = useState('Titles');
 	const [searchQuery, setSearchQuery] = useState('');
-	const [searchResults, setSearchResults] = useState<Track[]>([]);
+	const [trackResults, setTrackResults] = useState<Track[]>([]);
+	const [artistResults, setArtistResults] = useState<ArtistItem[]>([]);
 	const [isSearching, setIsSearching] = useState(false);
 	const { playTrack, currentTrack, isPlaying } = usePlayer();
 
-	const handleSearch = async (query: string) => {
+	const handleSearch = async (query: string, tab = activeTab) => {
 		setSearchQuery(query);
 		if (!query.trim()) {
-			setSearchResults([]);
+			setTrackResults([]);
+			setArtistResults([]);
 			return;
 		}
 
 		try {
 			setIsSearching(true);
-			const res = await fetch(`${API_BASE_URL}/player/search?q=${encodeURIComponent(query)}`);
-			if (res.ok) {
-				const data = await res.json();
-				setSearchResults(data);
+			if (tab === 'Artists') {
+				const res = await fetch(`${API_BASE_URL}/player/artists?q=${encodeURIComponent(query)}`);
+				if (res.ok) {
+					const data = await res.json();
+					setArtistResults(data);
+				}
 			} else {
-				console.error('Search request failed with status:', res.status);
+				const res = await fetch(`${API_BASE_URL}/player/search?q=${encodeURIComponent(query)}`);
+				if (res.ok) {
+					const data = await res.json();
+					setTrackResults(data);
+				}
 			}
 		} catch (err) {
 			console.error('Search error:', err);
@@ -34,6 +42,20 @@ export default function Research() {
 			setIsSearching(false);
 		}
 	};
+
+	const handleTabChange = (tab: string) => {
+		setActiveTab(tab);
+		if (searchQuery.trim()) {
+			handleSearch(searchQuery, tab);
+		}
+	};
+
+	const handleArtistPress = (artist: ArtistItem) => {
+		setActiveTab('Titles');
+		handleSearch(artist.name, 'Titles');
+	};
+
+	const hasResults = activeTab === 'Artists' ? artistResults.length > 0 : trackResults.length > 0;
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -50,7 +72,7 @@ export default function Research() {
 				/>
 				<CategoryTabs
 					activeTab={activeTab}
-					onTabChange={setActiveTab}
+					onTabChange={handleTabChange}
 				/>
 
 				{isSearching && (
@@ -59,10 +81,23 @@ export default function Research() {
 					</View>
 				)}
 
-				{!isSearching && searchResults.length > 0 && (
+				{!isSearching && activeTab === 'Artists' && artistResults.length > 0 && (
+					<View style={styles.sectionContainer}>
+						<Text style={styles.sectionTitle}>Artists (Topic Channels)</Text>
+						{artistResults.map((artist) => (
+							<ArtistListItem
+								key={artist.id}
+								artist={artist}
+								onPress={() => handleArtistPress(artist)}
+							/>
+						))}
+					</View>
+				)}
+
+				{!isSearching && activeTab !== 'Artists' && trackResults.length > 0 && (
 					<View style={styles.sectionContainer}>
 						<Text style={styles.sectionTitle}>Search Results</Text>
-						{searchResults.map((track) => (
+						{trackResults.map((track) => (
 							<TrackListItem
 								key={track.id}
 								title={track.title}
@@ -75,7 +110,7 @@ export default function Research() {
 					</View>
 				)}
 
-				{!isSearching && searchResults.length === 0 && (
+				{!isSearching && !hasResults && (
 					<>
 						<View style={styles.sectionContainer}>
 							<Text style={styles.sectionTitle}>Trending now</Text>
@@ -129,7 +164,7 @@ export default function Research() {
 				)}
 			</ScrollView>
 		</SafeAreaView>
-	)
+	);
 }
 
 const styles = StyleSheet.create({

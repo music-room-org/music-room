@@ -13,6 +13,14 @@ export interface TrackSearchResult {
   description: string;
 }
 
+export interface ArtistSearchResult {
+  id: string;
+  name: string;
+  channelTitle: string;
+  thumbnail: string;
+  description: string;
+}
+
 function decodeHtmlEntities(str: string): string {
   if (!str) return '';
   return str
@@ -82,6 +90,102 @@ export class YtApiService {
     }
 
     return this.searchViaYtDlp(searchQuery, maxResults);
+  }
+
+  /**
+   * Search YouTube for official - Topic artist channels.
+   */
+  async searchArtists(query: string, maxResults = 10): Promise<ArtistSearchResult[]> {
+    if (!query || !query.trim()) {
+      return [];
+    }
+
+    const trimmedQuery = query.trim();
+    const searchQuery = /-\s*topic$/i.test(trimmedQuery) ? trimmedQuery : `${trimmedQuery} - Topic`;
+    const apiKey = process.env.YT_API_KEY;
+
+    if (apiKey) {
+      try {
+        const url = new URL(`${this.baseUrl}/search`);
+        url.searchParams.set('part', 'snippet');
+        url.searchParams.set('type', 'video');
+        url.searchParams.set('videoCategoryId', '10');
+        url.searchParams.set('q', searchQuery);
+        url.searchParams.set('maxResults', '25');
+        url.searchParams.set('key', apiKey);
+
+        const response = await fetch(url.toString());
+        const data = await response.json();
+
+        if (!data.error && data.items && Array.isArray(data.items)) {
+          const artistMap = new Map<string, ArtistSearchResult>();
+
+          for (const item of data.items) {
+            const rawChannel = decodeHtmlEntities(item.snippet?.channelTitle || '').trim();
+            if (!rawChannel) continue;
+
+            const isTopic = /-\s*topic$/i.test(rawChannel);
+            const cleanName = cleanArtistName(rawChannel);
+            const thumbnail =
+              item.snippet?.thumbnails?.high?.url ||
+              item.snippet?.thumbnails?.medium?.url ||
+              item.snippet?.thumbnails?.default?.url ||
+              '';
+
+            if (!artistMap.has(cleanName)) {
+              artistMap.set(cleanName, {
+                id: item.snippet?.channelId || cleanName,
+                name: cleanName,
+                channelTitle: isTopic ? rawChannel : `${cleanName} - Topic`,
+                thumbnail,
+                description: 'Official Topic Channel',
+              });
+            }
+          }
+
+          if (artistMap.size > 0) {
+            return Array.from(artistMap.values()).slice(0, maxResults);
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`YouTube API artist search failed: ${err.message}`);
+      }
+    }
+
+    // Fallback via yt-dlp
+    try {
+      const command = `yt-dlp --dump-single-json --flat-playlist --extractor-args "youtube:player_client=android" "ytsearch20:${searchQuery.replace(
+        /"/g,
+        '\\"',
+      )}"`;
+      const { stdout } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+      const data = JSON.parse(stdout);
+
+      const artistMap = new Map<string, ArtistSearchResult>();
+      for (const entry of data.entries || []) {
+        const rawChannel = (entry.uploader || entry.channel || '').trim();
+        if (!rawChannel) continue;
+
+        const isTopic = /-\s*topic$/i.test(rawChannel);
+        const cleanName = cleanArtistName(rawChannel);
+        const thumbnail = entry.thumbnails?.[0]?.url || '';
+
+        if (!artistMap.has(cleanName)) {
+          artistMap.set(cleanName, {
+            id: entry.channel_id || cleanName,
+            name: cleanName,
+            channelTitle: isTopic ? rawChannel : `${cleanName} - Topic`,
+            thumbnail,
+            description: 'Official Topic Channel',
+          });
+        }
+      }
+
+      return Array.from(artistMap.values()).slice(0, maxResults);
+    } catch (error: any) {
+      this.logger.error(`yt-dlp artist search error: ${error.message}`);
+      return [];
+    }
   }
 
   private async searchViaYoutubeApi(

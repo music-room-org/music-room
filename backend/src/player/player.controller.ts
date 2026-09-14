@@ -28,6 +28,14 @@ export class PlayerController {
     return this.ytApiService.searchTracks(query);
   }
 
+  @Get('artists')
+  async searchArtists(@Query('q') query: string) {
+    if (!query) {
+      throw new HttpException('Query parameter "q" is required', HttpStatus.BAD_REQUEST);
+    }
+    return this.ytApiService.searchArtists(query);
+  }
+
   @Get('stream/:videoId')
   async stream(
     @Param('videoId') videoId: string,
