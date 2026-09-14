@@ -46,6 +46,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [durationMillis, setDurationMillis] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const cleanBackendAudio = useCallback((id: string) => {
+    if (!id) return;
+    fetch(`${API_BASE_URL}/player/clean/${id}`, { method: 'DELETE' }).catch(() => {});
+  }, []);
+
   const stopTrack = useCallback(async () => {
     if (nativePlayerRef.current) {
       try {
@@ -58,12 +63,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       webSoundRef.current.pause();
       webSoundRef.current = null;
     }
+    if (currentTrack?.id) {
+      cleanBackendAudio(currentTrack.id);
+    }
     setCurrentTrack(null);
     setIsPlaying(false);
     setPositionMillis(0);
     setDurationMillis(0);
     setIsModalOpen(false);
-  }, []);
+  }, [currentTrack, cleanBackendAudio]);
 
   useEffect(() => {
     return () => {
@@ -109,9 +117,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playTrack = async (track: Track) => {
     try {
       setIsLoading(true);
+      const previousTrackId = currentTrack?.id;
       setCurrentTrack(track);
       setPositionMillis(0);
       setDurationMillis(0);
+
+      // Clean up previous track on backend if switching
+      if (previousTrackId && previousTrackId !== track.id) {
+        cleanBackendAudio(previousTrackId);
+      }
 
       // Stop existing playback
       if (nativePlayerRef.current) {
@@ -135,10 +149,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           
           player.addListener('statusChange', (status: any) => {
             if (status) {
-              setIsPlaying(status.status === 'playing' || status.playing);
+              const playing = status.status === 'playing' || status.playing;
+              setIsPlaying(playing);
               setIsLoading(status.status === 'loading' || status.isBuffering);
               if (typeof status.currentTime === 'number') setPositionMillis(status.currentTime * 1000);
               if (typeof status.duration === 'number' && status.duration > 0) setDurationMillis(status.duration * 1000);
+
+              // If playback finished
+              if (
+                status.didJustFinish ||
+                status.playbackState === 'ended' ||
+                status.status === 'ended' ||
+                (status.duration > 0 && status.currentTime >= status.duration)
+              ) {
+                setIsPlaying(false);
+                cleanBackendAudio(track.id);
+              }
             }
           });
 
@@ -173,6 +199,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         audio.onended = () => {
           setIsPlaying(false);
           setPositionMillis(0);
+          cleanBackendAudio(track.id);
         };
 
         webSoundRef.current = audio;
