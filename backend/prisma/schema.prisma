@@ -23,6 +23,7 @@ enum AuthProvider {
 
 model User {
   id            String       @id @default(uuid())
+  username      String?      @unique
   email         String       @unique
   passwordHash  String?
   AuthProvider  AuthProvider @default(EMAIL)
@@ -31,6 +32,7 @@ model User {
   updatedAt     DateTime     @updatedAt
   playlists Playlist[]
   votes Vote[]
+  profileImage    String?
 
   // Public information
   displayName String?

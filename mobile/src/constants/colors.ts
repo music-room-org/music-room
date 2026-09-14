@@ -2,6 +2,8 @@ const WHITE = "#FFFFFF";
 
 export const COLORS = {
   primary: "#EA9900",
+  secondary: "#F9EACA",
+  button_secondary: "#F6F5F5",
   background: "#F2F2F4",
   cardBackground: "#F9F9FB",
   cardBorder: "#EAEAEA",
