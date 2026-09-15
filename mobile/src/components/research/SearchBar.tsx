@@ -8,12 +8,7 @@ interface SearchBarProps {
 	onSubmitEditing?: () => void;
 }
 
-interface SearchBarProps {
-	value: string;
-	onChangeText: (text: string) => void;
-}
-
-export function SearchBar({ value, onChangeText }: SearchBarProps) {
+export function SearchBar({ value, onChangeText, onSubmitEditing }: SearchBarProps) {
 	return (
 		<View style={styles.container}>
 			<Search size={22} color={COLORS.inputIcon} />

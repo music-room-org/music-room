@@ -28,27 +28,6 @@ const mockRecommendedTitles = [
 			"https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
 	},
 	{
-		id: "2",
-		title: "Title 2",
-		artist: "Artist 2",
-		imageUrl:
-			"https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
-	},
-	{
-		id: "3",
-		title: "Title 3",
-		artist: "Artist 3",
-		imageUrl:
-			"https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
-	},
-	{
-		id: "4",
-		title: "Title 4",
-		artist: "Artist 4",
-		imageUrl:
-			"https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
-	},
-	{
 		id: "5",
 		title: "Title 5",
 		artist: "Artist 5",
@@ -238,6 +217,7 @@ export default function Playlist() {
 					{playlistTracks.length === 0 && (
 						<TouchableOpacity
 							style={styles.addTitlesButton}
+							onPress={() => router.push(`/playlist/search?id=${id}`)}
 						>
 							<Text style={styles.addTitlesText}>
 								Add new titles

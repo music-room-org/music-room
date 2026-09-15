@@ -1,55 +1,20 @@
-import {
-	View,
-	Text,
-	StyleSheet,
-	TouchableOpacity,
-	TextInput,
-	Platform,
-} from "react-native";
-
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, Plus, Check } from "lucide-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { COLORS, FONTS } from "@/constants";
+import { COLORS, FONTS, API_BASE_URL } from "@/constants";
 import { useState } from "react";
 import * as SecureStore from "expo-secure-store";
-
-const mockSearchResults = [
-	{
-		id: "1",
-		title: "Title 1",
-		artist: "Artist 1",
-	},
-	{
-		id: "2",
-		title: "Title 2",
-		artist: "Artist 2",
-	},
-	{
-		id: "3",
-		title: "Title 3",
-		artist: "Artist 3",
-	},
-	{
-		id: "4",
-		title: "Title 4",
-		artist: "Artist 4",
-	},
-	{
-		id: "5",
-		title: "Title 5",
-		artist: "Artist 5",
-	},
-];
+import { TrackListItem } from "@/components";
 
 export default function PlaylistSearch() {
 	const { id } = useLocalSearchParams();
 	const router = useRouter();
 
 	const [searchQuery, setSearchQuery] = useState("");
-	const [searchResults, setSearchResults] = useState(
-		mockSearchResults
-	);
+	const [addedTrackIds, setAddedTrackIds] = useState<string[]>([]);
+	const [trackResults, setTrackResults] = useState<any[]>([]);
+	const [isSearching, setIsSearching] = useState(false);
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
@@ -72,10 +37,35 @@ export default function PlaylistSearch() {
 			);
 
 			if (response.ok) {
-				router.back();
+				setAddedTrackIds((prev) => [...prev, trackId]);
 			}
+
 		} catch (error) {
 			console.error(error);
+		}
+	};
+
+	const handleSearch = async (query: string) => {
+		setSearchQuery(query);
+		if (!query.trim()) {
+			setTrackResults([]);
+			return;
+		}
+
+		try {
+			setIsSearching(true);
+
+			const res = await fetch(`${API_BASE_URL}/player/artists?q=${encodeURIComponent(query)}`);
+				
+			if (res.ok) {
+				const data = await res.json();
+				setTrackResults(data);
+			}
+
+		} catch (err) {
+			console.error('Search error:', err);
+		} finally {
+			setIsSearching(false);
 		}
 	};
 
@@ -105,6 +95,7 @@ export default function PlaylistSearch() {
 					<TextInput
 						value={searchQuery}
 						onChangeText={setSearchQuery}
+						onSubmitEditing={() => handleSearch(searchQuery)}
 						placeholder="Search for a title or an artist"
 						placeholderTextColor={COLORS.textMuted}
 						style={styles.searchInput}
@@ -112,30 +103,31 @@ export default function PlaylistSearch() {
 				</View>
 
 				<View style={styles.resultsList}>
-					{searchResults.map((track) => (
-						<TouchableOpacity
-							key={track.id}
-							style={styles.trackItem}
-							onPress={() =>
-								handleAddTitle(track.id)
-							}
-						>
-							<View style={styles.trackInfo}>
-								<Text
-									style={styles.trackTitle}
-									numberOfLines={1}
-								>
-									{track.title}
-								</Text>
+					{trackResults.map((track) => (
+						<View key={track.id} style={styles.trackItem}>
+							<TrackListItem
+								title={track.title}
+								subtitle={track.artist}
+								imageUrl={track.thumbnail}
+							/>
 
-								<Text
-									style={styles.trackArtist}
-									numberOfLines={1}
-								>
-									{track.artist}
-								</Text>
-							</View>
-						</TouchableOpacity>
+							<TouchableOpacity
+								onPress={() => handleAddTitle(track)}
+								disabled={addedTrackIds.includes(track.id)}
+							>
+								{addedTrackIds.includes(track.id) ? (
+									<Check
+										size={24}
+										color="green"
+									/>
+								) : (
+									<Plus
+										size={24}
+										color={COLORS.textPrimary}
+									/>
+								)}
+							</TouchableOpacity>
+						</View>
 					))}
 				</View>
 

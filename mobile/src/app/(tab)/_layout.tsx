@@ -53,7 +53,8 @@ function CustomTabBar({ state, descriptors, navigation, hasNotification }: Botto
 						</View>
 					</TouchableOpacity>
 				);
-			})}
+				})}
+			</View>
 		</View>
 	);
 }

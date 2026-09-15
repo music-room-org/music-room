@@ -2,9 +2,8 @@ import { View, ScrollView, Text, ActivityIndicator, StyleSheet, Platform } from 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 import * as SecureStore from "expo-secure-store";
-
 import { COLORS, FONTS, API_BASE_URL } from "@/constants";
-import { SearchBar, PrimaryButton, ArtistListItem, ArtistItem } from "@/components";
+import { SearchBar, PrimaryButton, ArtistListItem, ArtistItem, CategoryTabs, TrackListItem, PlaylistItem } from "@/components";
 import { usePlayer, Track } from "@/context/PlayerContext";
 
 async function getToken() {
@@ -66,7 +65,6 @@ export default function Research() {
 	};
 
 	const hasResults = activeTab === 'Artists' ? artistResults.length > 0 : trackResults.length > 0;
-	const [searchQuery, setSearchQuery] = useState('');
 	const [searchResults, setSearchResults] = useState<any[]>([]);
 	const [pendingRequests, setPendingRequests] = useState<string[]>([]);
 
@@ -106,10 +104,7 @@ export default function Research() {
 			const token = await getToken();
 			if (!token) return;
 
-			const apiUrl =
-				Platform.OS === "android"
-					? "http://10.0.2.2:3000"
-					: "http://localhost:3000";
+			const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
 			const response = await fetch(
 				`${apiUrl}/friends/search?q=${encodeURIComponent(searchQuery)}`,
@@ -242,7 +237,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: COLORS.background
 	},
-
 	scrollView: {
 		flex: 1,
 	},
@@ -258,18 +252,22 @@ const styles = StyleSheet.create({
 	sectionContainer: {
 		marginTop: 24
 	},
-
 	userCard: {
 		backgroundColor: COLORS.white,
 		borderRadius: 16,
 		padding: 16,
 		marginBottom: 16
 	},
-
 	username: {
 		fontFamily: FONTS.semiBold,
 		fontSize: 18,
 		color: COLORS.textPrimary,
 		marginBottom: 12
+	},
+	sectionTitle: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 22,
+		color: COLORS.textPrimary,
+		marginBottom: 16
 	}
 });
