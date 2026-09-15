@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { COLORS, FONTS } from "@/constants";
+import { FONTS } from "@/constants";
 import { User } from "lucide-react-native";
 
 interface FriendAvatarProps {

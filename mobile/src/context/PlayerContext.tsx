@@ -38,6 +38,7 @@ try {
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const nativePlayerRef = useRef<any>(null);
   const webSoundRef = useRef<HTMLAudioElement | null>(null);
+  const currentTrackRef = useRef<Track | null>(null);
 
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -63,21 +64,34 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       webSoundRef.current.pause();
       webSoundRef.current = null;
     }
-    if (currentTrack?.id) {
-      cleanBackendAudio(currentTrack.id);
+    if (currentTrackRef.current?.id) {
+      cleanBackendAudio(currentTrackRef.current.id);
     }
+    currentTrackRef.current = null;
     setCurrentTrack(null);
     setIsPlaying(false);
     setPositionMillis(0);
     setDurationMillis(0);
     setIsModalOpen(false);
-  }, [currentTrack, cleanBackendAudio]);
+  }, [cleanBackendAudio]);
 
+  // Cleanup on unmount only
   useEffect(() => {
     return () => {
-      stopTrack();
+      if (nativePlayerRef.current) {
+        try {
+          nativePlayerRef.current.pause();
+          nativePlayerRef.current.remove?.();
+        } catch {}
+      }
+      if (webSoundRef.current) {
+        webSoundRef.current.pause();
+      }
+      if (currentTrackRef.current?.id) {
+        cleanBackendAudio(currentTrackRef.current.id);
+      }
     };
-  }, [stopTrack]);
+  }, [cleanBackendAudio]);
 
   // Continuous position & duration updater while playing
   useEffect(() => {
@@ -117,7 +131,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playTrack = async (track: Track) => {
     try {
       setIsLoading(true);
-      const previousTrackId = currentTrack?.id;
+      const previousTrackId = currentTrackRef.current?.id;
+      currentTrackRef.current = track;
       setCurrentTrack(track);
       setPositionMillis(0);
       setDurationMillis(0);
@@ -155,12 +170,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
               if (typeof status.currentTime === 'number') setPositionMillis(status.currentTime * 1000);
               if (typeof status.duration === 'number' && status.duration > 0) setDurationMillis(status.duration * 1000);
 
-              // If playback finished
+              // If playback finished (duration > 0 and near end)
               if (
                 status.didJustFinish ||
-                status.playbackState === 'ended' ||
-                status.status === 'ended' ||
-                (status.duration > 0 && status.currentTime >= status.duration)
+                (status.duration > 2 && typeof status.currentTime === 'number' && status.currentTime >= status.duration - 0.5)
               ) {
                 setIsPlaying(false);
                 cleanBackendAudio(track.id);
