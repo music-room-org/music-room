@@ -1,31 +1,25 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
-import { Play, Pause } from "lucide-react-native";
+import { Play } from "lucide-react-native";
 import { COLORS, FONTS } from "@/constants";
 
 interface TrackListItemProps {
 	title: string;
 	subtitle: string;
 	imageUrl: string;
-	onPress?: () => void;
-	isPlaying?: boolean;
 }
 
-export function TrackListItem({ title, subtitle, imageUrl, onPress, isPlaying }: TrackListItemProps) {
+export function TrackListItem({title, subtitle, imageUrl}: TrackListItemProps) {
 	return (
-		<TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-			<Image source={{ uri: imageUrl }} style={styles.image} />
+		<View style={styles.container}>
+			<Image src={imageUrl} style={styles.image} />
 			<View style={styles.textContainer}>
-				<Text style={styles.title} numberOfLines={1}>{title}</Text>
-				<Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
+				<Text style={styles.title}>{title}</Text>
+				<Text style={styles.subtitle}>{subtitle}</Text>
 			</View>
-			<TouchableOpacity style={styles.playButton} onPress={onPress}>
-				{isPlaying ? (
-					<Pause color={COLORS.primary} fill={COLORS.primary} size={18} />
-				) : (
-					<Play color={COLORS.primary} fill={COLORS.primary} size={18} />
-				)}
+			<TouchableOpacity style={styles.playButton}>
+				<Play color={COLORS.primary} fill={COLORS.primary} size={20}/>
 			</TouchableOpacity>
-		</TouchableOpacity>
+		</View>
 	)
 }
 
@@ -64,4 +58,4 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center'
 	},
-});
+})

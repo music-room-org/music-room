@@ -9,8 +9,7 @@
     "scheme": "musicroom",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.anonymous.music-room"
+      "icon": "./assets/expo.icon"
     },
     "android": {
       "adaptiveIcon": {
@@ -36,7 +35,6 @@
         }
       ],
       "expo-secure-store",
-      "expo-audio",
       "expo-web-browser"
     ],
     "experiments": {

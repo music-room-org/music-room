@@ -3,7 +3,10 @@ import { Home, Search, Disc, User } from "lucide-react-native";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { BottomTabBarProps } from "expo-router/build/react-navigation/bottom-tabs";
 import { COLORS } from "@/constants";
-import { PlayerBar } from "@/components/PlayerBar";
+import { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
+import { io } from "socket.io-client";
+import { Platform, Alert, DeviceEventEmitter } from "react-native";
 
 const ICONS = {
 	index: Home,
@@ -14,24 +17,22 @@ const ICONS = {
 
 function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 	return (
-		<View style={styles.tabBarContainer}>
-			<PlayerBar />
-			<View style={styles.tabBar}>
-				{state.routes.map((route, index) => {
-					const focused = state.index === index;
-					const color = focused ? COLORS.primary : COLORS.tabInactive;
-					const Icon = ICONS[route.name as keyof typeof ICONS];
+		<View style={styles.tabBar}>
+			{state.routes.map((route, index) => {
+				const focused = state.index === index;
+				const color = focused ? COLORS.primary : COLORS.tabInactive;
+				const Icon = ICONS[route.name as keyof typeof ICONS];
 
-					const onPress = () => {
-						const event = navigation.emit({
-							type: 'tabPress',
-							target: route.key,
-							canPreventDefault: true,
-						});
-						if (!focused && !event.defaultPrevented) {
-							navigation.navigate(route.name);
-						}
-					};
+				const onPress = () => {
+					const event = navigation.emit({
+						type: 'tabPress',
+						target: route.key,
+						canPreventDefault: true,
+					});
+					if (!focused && !event.defaultPrevented) {
+						navigation.navigate(route.name);
+					}
+				};
 
 					return (
 						<TouchableOpacity
@@ -64,16 +65,10 @@ export default function TabsLayout() {
 			<Tabs.Screen name='library' />
 			<Tabs.Screen name='profile' />
 		</Tabs>
-	);
+	)
 }
 
 const styles = StyleSheet.create({
-	tabBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
-	},
 	tabBar: {
 		flexDirection: 'row',
 		alignItems: 'center',
@@ -85,7 +80,10 @@ const styles = StyleSheet.create({
 		borderColor: COLORS.cardBorder,
 		elevation: 5, // android
 		shadowOpacity: 0.05, // ios
-		marginBottom: 20,
+		position: 'absolute',
+		bottom: 20,
+		left: 0,
+		right: 0,
 	},
 	tabItem: {
 		flex: 1,

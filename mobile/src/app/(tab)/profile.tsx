@@ -135,11 +135,7 @@ export default function Profile() {
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
-			<ScrollView
-				style={styles.scrollView}
-				contentContainerStyle={styles.scrollContent}
-				showsVerticalScrollIndicator={false}
-			>
+			<ScrollView style={styles.scrollContent}>
 				<View style={styles.header}>
 					<View
 						style={{
@@ -358,12 +354,8 @@ const styles = StyleSheet.create({
 		backgroundColor: "#ffffff",
 	},
 
-	scrollView: {
-		flex: 1,
-	},
-
 	scrollContent: {
-		paddingBottom: 170,
+		paddingBottom: 100,
 		paddingTop: 20,
 	},
 

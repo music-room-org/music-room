@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { PlayerProvider } from "@/context/PlayerContext";
+import * as Linking from 'expo-linking';
 
 import {
   useFonts,
@@ -31,9 +31,5 @@ export default function RootLayout() {
     return null;
   }
 
-  return (
-    <PlayerProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-    </PlayerProvider>
-  );
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
