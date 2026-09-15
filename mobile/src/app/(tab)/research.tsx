@@ -1,10 +1,10 @@
-import { View, ScrollView, Text, StyleSheet, Platform } from "react-native";
+import { View, ScrollView, Text, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 import * as SecureStore from "expo-secure-store";
 
-import { COLORS, FONTS } from "@/constants";
-import { SearchBar, PrimaryButton } from "@/components";
+import { COLORS, FONTS, API_BASE_URL } from "@/constants";
+import { SearchBar, PrimaryButton, ArtistListItem, ArtistItem } from "@/components";
 
 async function getToken() {
 	if (Platform.OS === "web") {
@@ -13,6 +13,7 @@ async function getToken() {
 
 	return await SecureStore.getItemAsync("userToken");
 }
+import { usePlayer, Track } from "@/context/PlayerContext";
 
 export default function Research() {
 	const [activeTab, setActiveTab] = useState('Titles');
@@ -52,6 +53,43 @@ export default function Research() {
 				setSearchResults([]);
 				return;
 			}
+
+			const token = await getToken();
+			if (!token) return;
+
+			const apiUrl =
+				Platform.OS === "android"
+					? "http://10.0.2.2:3000"
+					: "http://localhost:3000";
+
+			const response = await fetch(
+				`${apiUrl}/friends/search?q=${encodeURIComponent(searchQuery)}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			const data = await response.json();
+			setSearchResults(data);
+		};
+
+		searchUsers();
+	}, [searchQuery]);
+=
+	const [trackResults, setTrackResults] = useState<Track[]>([]);
+	const [artistResults, setArtistResults] = useState<ArtistItem[]>([]);
+	const [isSearching, setIsSearching] = useState(false);
+	const { playTrack, currentTrack, isPlaying } = usePlayer();
+
+	const handleSearch = async (query: string, tab = activeTab) => {
+		setSearchQuery(query);
+		if (!query.trim()) {
+			setTrackResults([]);
+			setArtistResults([]);
+			return;
+		}
 
 			const token = await getToken();
 			if (!token) return;
@@ -125,12 +163,20 @@ const styles = StyleSheet.create({
 	},
 
 	sectionContainer: {
-		marginTop: 32
+		marginTop: 24
 	},
-	sectionTitle: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 22,
-		color: COLORS.textPrimary,
+
+	userCard: {
+		backgroundColor: COLORS.white,
+		borderRadius: 16,
+		padding: 16,
 		marginBottom: 16
+	},
+
+	username: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 18,
+		color: COLORS.textPrimary,
+		marginBottom: 12
 	}
 });
