@@ -5,9 +5,10 @@ import { HealthController } from './health.controller';
 import { AuthController } from './controller';
 import { FriendsModule } from './friends/friends.module';
 import { PlaylistController } from './playlist.controller';
+import { PlayerModule } from './player/player.module';
 
 @Module({
-  imports: [FriendsModule],
+  imports: [PlayerModule, FriendsModule],
   controllers: [
     AppController,
     HealthController,
@@ -17,3 +18,4 @@ import { PlaylistController } from './playlist.controller';
   providers: [AppService],
 })
 export class AppModule {}
+
