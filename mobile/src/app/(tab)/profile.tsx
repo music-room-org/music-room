@@ -1,11 +1,10 @@
 import { View, Text, ScrollView, StyleSheet, Image, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera, Pencil, UserPlus, ChevronRight, LogOut } from "lucide-react-native";
-import { useRouter } from "expo-router";
+import { ChevronLeft, Pencil, UserPlus, ChevronRight, LogOut } from "lucide-react-native";
+import { useRouter, useFocusEffect } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { ProfileStat, ProfileActionButton, ActivityItem, FriendAvatar } from "@/components";
 import { useState, useCallback } from "react";
-import { useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 
 export default function Profile() {

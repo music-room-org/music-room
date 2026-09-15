@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Eye, EyeOff, LockKeyhole, Mail, User } from "lucide-react-native";
 import * as Linking from 'expo-linking';
@@ -22,7 +22,6 @@ import { useRouter } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
-import { Platform } from "react-native";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,7 +37,7 @@ export function AuthScreen() {
 	const [resetToken, setResetToken] = useState("");
 	const [username, setUsername] = useState("");
 
-	const [request, response, promptAsync] = Google.useAuthRequest({
+	const [, response, promptAsync] = Google.useAuthRequest({
 		webClientId: "119307991318-6q08olkvff98ol795k125ff5boh9ng8l.apps.googleusercontent.com",
 		iosClientId: "119307991318-0drk1nlrgs2q2iq1o8of1r4v1cnivin9.apps.googleusercontent.com",
 		redirectUri: "com.googleusercontent.apps.119307991318-0drk1nlrgs2q2iq1o8of1r4v1cnivin9:/oauth2redirect/google"
