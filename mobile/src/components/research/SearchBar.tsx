@@ -1,9 +1,14 @@
 import { View, TextInput, StyleSheet } from "react-native";
 import { Search } from "lucide-react-native";
-import { COLORS } from "@/constants";
-import { FONTS } from "@/constants";
+import { COLORS, FONTS } from "@/constants";
 
-export function SearchBar() {
+interface SearchBarProps {
+	value?: string;
+	onChangeText?: (text: string) => void;
+	onSubmitEditing?: () => void;
+}
+
+export function SearchBar({ value, onChangeText, onSubmitEditing }: SearchBarProps) {
 	return (
 		<View style={styles.container}>
 			<Search size={22} color={COLORS.inputIcon} />
@@ -11,8 +16,11 @@ export function SearchBar() {
 				style={styles.input} 
 				placeholder="Search for a title, an artist, or a playlist" 
 				placeholderTextColor={COLORS.placeholder} 
-				/>
-
+				value={value}
+				onChangeText={onChangeText}
+				onSubmitEditing={onSubmitEditing}
+				returnKeyType="search"
+			/>
 		</View>
 	)
 }
@@ -35,4 +43,4 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		color: COLORS.inputText
 	}
-})
+});

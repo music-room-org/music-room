@@ -20,3 +20,6 @@ export * from "./profile/FriendAvatar";
 export * from "./profile/ProfileActionButton";
 export * from "./profile/ProfileStat";
 export * from "./profile/ChangePasswordModal";
+export * from "./PlayerBar";
+export * from "./MusicPlayerModal";
+export * from "./research/ArtistListItem";
