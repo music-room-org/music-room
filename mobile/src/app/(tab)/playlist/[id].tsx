@@ -1,28 +1,11 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Plus } from "lucide-react-native";
+import { ChevronLeft, Plus, Pencil } from "lucide-react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import * as SecureStore from "expo-secure-store";
 import { usePlayer } from "@/context/PlayerContext";
-
-const mockRecommendedTitles = [
-	{
-		id: "1",
-		title: "Title 1",
-		artist: "Artist 1",
-		imageUrl:
-			"https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
-	},
-	{
-		id: "5",
-		title: "Title 5",
-		artist: "Artist 5",
-		imageUrl:
-			"https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
-	},
-];
 
 async function getToken() {
 	if (Platform.OS === "web")
@@ -33,12 +16,12 @@ async function getToken() {
 export default function Playlist() {
 	const { id } = useLocalSearchParams();
 	const router = useRouter();
-	const { playTrack } = usePlayer();
+	const { playQueue } = usePlayer();
 
 	const [playlistName, setPlaylistName] = useState("");
 	const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
-	const [addedTrackIds, setAddedTrackIds] = useState<string[]>([]);
 	const [playlistImage, setPlaylistImage] = useState("");
+	const [playlistOwner, setPlaylistOwner] = useState("");
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
@@ -63,7 +46,8 @@ export default function Playlist() {
 
 					console.log("PLAYLIST DATA:", data);
 					setPlaylistName(data.name);
-					setPlaylistImage(data.imageUrl);
+					setPlaylistImage(data.thumbnail);
+					setPlaylistOwner(data.owner?.username || "");
 
 					if (data.tracks) {
 						setPlaylistTracks(data.tracks);
@@ -74,37 +58,6 @@ export default function Playlist() {
 			};
 		fetchPlaylist();
 	}, [id]));
-
-	const handleAddTrack = async (track: typeof mockRecommendedTitles[0]) => {
-		try {
-			const response = await fetch(
-				`${apiUrl}/playlists/${id}/tracks`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						trackId: track.id,
-					}),
-				}
-			);
-
-			if (response.ok) {
-				setPlaylistTracks((current) => [
-					...current,
-					track,
-				]);
-
-				setAddedTrackIds((current) => [
-					...current,
-					track.id,
-				]);
-			}
-		} catch (error) {
-			console.error(error);
-		}
-	};
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -137,13 +90,14 @@ export default function Playlist() {
 							</Text>
 
 							<Text style={styles.playlistAuthor}>
-								Playlist by Faustoche
+								Playlist by {playlistOwner}
 							</Text>
 						</View>
 					</View>
 
 					<View style={styles.buttonsContainer}>
 						<TouchableOpacity style={styles.infoButton}>
+							<Pencil size={16} color="#E7A500"/>
 							<Text style={styles.infoButtonText}>
 								Edit informations
 							</Text>
@@ -154,8 +108,9 @@ export default function Playlist() {
 								style={styles.infoButton}
 								onPress={() => { router.push(`/playlist/search?id=${id}`)}}
 							>
+								<Plus size={18} color="#E7A500"/>
 								<Text style={styles.infoButtonText}>
-									+ Add titles
+									Add titles
 								</Text>
 							</TouchableOpacity>
 						)}
@@ -163,16 +118,16 @@ export default function Playlist() {
 
 					<View style={styles.divider} />
 
-					{playlistTracks.map((track) => (
+					{playlistTracks.map((track, index) => (
 						<TouchableOpacity
 							key={track.id}
 							style={styles.trackItem}
-							onPress={() => playTrack(track)}
+							onPress={() => playQueue(playlistTracks, index)}
 						>
 
 							<Image
 								source={{
-									uri: track.imageUrl,
+									uri: track.thumbnail,
 								}}
 								style={styles.trackImage}
 							/>
@@ -213,64 +168,6 @@ export default function Playlist() {
 							</Text>
 						</TouchableOpacity>
 					)}
-
-					<Text style={styles.sectionTitle}>
-						Recommanded titles
-					</Text>
-
-					<View style={styles.tracksList}>
-						{mockRecommendedTitles.map((track) => {
-							const isAdded =
-								addedTrackIds.includes(track.id);
-
-							return (
-								<View
-									key={track.id}
-									style={styles.trackItem}
-								>
-									<Image
-										source={{
-											uri: track.imageUrl,
-										}}
-										style={styles.trackImage}
-									/>
-
-									<View style={styles.trackInfo}>
-										<Text
-											style={styles.trackTitle}
-											numberOfLines={1}
-										>
-											{track.title}
-										</Text>
-
-										<Text
-											style={styles.trackArtist}
-											numberOfLines={1}
-										>
-											{track.artist}
-										</Text>
-									</View>
-
-									<TouchableOpacity
-										style={styles.addButton}
-										onPress={() =>
-											handleAddTrack(track)
-										}
-										disabled={isAdded}
-									>
-										{!isAdded && (
-											<Plus
-												size={22}
-												color={
-													COLORS.textPrimary
-												}
-											/>
-										)}
-									</TouchableOpacity>
-								</View>
-							);
-						})}
-					</View>
 				</ScrollView>
 			</View>
 		</SafeAreaView>
@@ -343,6 +240,9 @@ const styles = StyleSheet.create({
 	},
 
 	infoButton: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
 		alignSelf: "flex-start",
 		paddingHorizontal: 18,
 		paddingVertical: 7,
@@ -389,19 +289,6 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: "#E7A500",
 	},
-
-	sectionTitle: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 20,
-		color: COLORS.textPrimary,
-		marginTop: 43,
-		marginBottom: 28,
-	},
-
-	tracksList: {
-		gap: 10,
-	},
-
 	trackItem: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -432,12 +319,5 @@ const styles = StyleSheet.create({
 		fontFamily: FONTS.regular,
 		fontSize: 13,
 		color: COLORS.textPrimary,
-	},
-
-	addButton: {
-		width: 35,
-		height: 35,
-		justifyContent: "center",
-		alignItems: "center",
-	},
+	}
 });

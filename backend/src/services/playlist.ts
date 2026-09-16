@@ -22,6 +22,7 @@ export async function getPlaylistById(id: string) {
 	const playlist = await prisma.playlist.findUnique({
 		where: { id: id },
 		include: { 
+			owner: true,
 			playlistTracks: {
 				include: {
 					track: true,
@@ -36,8 +37,10 @@ export async function getPlaylistById(id: string) {
 	return {
 		...playlist,
 		tracks: playlist.playlistTracks.map((pt) => ({
-			...pt.track,
-			imageUrl: `https://i.ytimg.com/vi/${pt.track.sourceId}/hqdefault.jpg`,
+			id: pt.track.sourceId,
+			title: pt.track.title,
+			artist: pt.track.artist,
+			thumbnail: `https://i.ytimg.com/vi/${pt.track.sourceId}/hqdefault.jpg`,
 		})),
 	};
 }

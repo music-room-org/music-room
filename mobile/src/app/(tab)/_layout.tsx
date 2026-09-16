@@ -16,15 +16,23 @@ const ICONS = {
 	profile: User,
 };
 
-function CustomTabBar({ state, descriptors, navigation, hasNotification }: BottomTabBarProps & { hasNotification: boolean }) {
+function CustomTabBar({ state, navigation, hasNotification }: BottomTabBarProps & { hasNotification: boolean }) {
 	return (
 		<View style={styles.tabBarContainer}>
 			<PlayerBar />
 			<View style={styles.tabBar}>
 				{state.routes.map((route, index) => {
-					const focused = state.index === index;
+					const activeRouteName = state.routes[state.index].name;
+
+					const focused = state.index === index || (route.name === 'library' && activeRouteName.startsWith('playlist'));
 					const color = focused ? COLORS.primary : COLORS.tabInactive;
+					
+					if (route.name === 'playlist')
+						return null;
+
 					const Icon = ICONS[route.name as keyof typeof ICONS];
+
+					if (!Icon) return null;
 
 					const onPress = () => {
 						const event = navigation.emit({
@@ -130,6 +138,7 @@ export default function TabsLayout() {
 			<Tabs.Screen name='research' />
 			<Tabs.Screen name='library' />
 			<Tabs.Screen name='profile' />
+			<Tabs.Screen name='playlist' options={{}} />
 		</Tabs>
 	);
 }
