@@ -73,11 +73,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setIsModalOpen(false);
   }, [currentTrack, cleanBackendAudio]);
 
+  // useEffect(() => {
+  //   return () => {
+  //     stopTrack();
+  //   };
+  // }, [stopTrack]);
+
+
+  // Nettoyage uniquement à la fermeture de l'application (unmount global)
   useEffect(() => {
     return () => {
-      stopTrack();
+      if (nativePlayerRef.current) {
+        try { nativePlayerRef.current.pause(); } catch {}
+      }
+      if (webSoundRef.current) {
+        webSoundRef.current.pause();
+      }
     };
-  }, [stopTrack]);
+  }, []);
 
   // Continuous position & duration updater while playing
   useEffect(() => {
@@ -214,6 +227,126 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setIsPlaying(false);
     }
   };
+
+
+// const playTrack = async (track: Track) => {
+//     try {
+//       setIsLoading(true);
+//       const previousTrackId = currentTrack?.id;
+//       setCurrentTrack(track);
+//       setPositionMillis(0);
+//       setDurationMillis(0);
+
+//       // Clean up previous track on backend if switching
+//       if (previousTrackId && previousTrackId !== track.id) {
+//         cleanBackendAudio(previousTrackId);
+//       }
+
+//       // Stop existing playback
+//       if (nativePlayerRef.current) {
+//         try {
+//           nativePlayerRef.current.pause();
+//           nativePlayerRef.current.remove?.();
+//         } catch {}
+//         nativePlayerRef.current = null;
+//       }
+//       if (webSoundRef.current) {
+//         webSoundRef.current.pause();
+//         webSoundRef.current = null;
+//       }
+
+//       const streamUrl = `${API_BASE_URL}/player/stream/${track.id}`;
+
+//       // Try Expo SDK 57 expo-audio native player
+//       if (createAudioPlayer) {
+//         try {
+//           const player = createAudioPlayer(streamUrl);
+          
+//           player.addListener('statusChange', (status: any) => {
+//             if (status) {
+//               const playing = status.status === 'playing' || status.playing;
+//               setIsPlaying(playing);
+//               setIsLoading(status.status === 'loading' || status.isBuffering);
+//               if (typeof status.currentTime === 'number') setPositionMillis(status.currentTime * 1000);
+//               if (typeof status.duration === 'number' && status.duration > 0) setDurationMillis(status.duration * 1000);
+
+//               // If playback finished
+//               if (
+//                 status.didJustFinish ||
+//                 status.playbackState === 'ended' ||
+//                 status.status === 'ended' ||
+//                 (status.duration > 0 && status.currentTime >= status.duration)
+//               ) {
+//                 setIsPlaying(false);
+//                 cleanBackendAudio(track.id);
+//               }
+//             }
+//           });
+
+//           player.play();
+//           nativePlayerRef.current = player;
+//           return;
+//         } catch (expoErr) {
+//           console.warn('Expo Native expo-audio failed, attempting Web Audio fallback:', expoErr);
+//         }
+//       }
+
+//       // Web Audio API Fallback
+//       if (typeof window !== 'undefined' && (window as any).Audio) {
+//         const audio = new (window as any).Audio(streamUrl);
+//         audio.preload = 'auto';
+
+//         // Maintient le spinner tant que le flux n'a pas assez de données
+//         audio.onwaiting = () => {
+//           setIsLoading(true);
+//         };
+
+//         // Déclenché dès que les premiers paquets audio sont prêts à être joués
+//         audio.oncanplay = () => {
+//           setIsLoading(false);
+//         };
+
+//         audio.ontimeupdate = () => {
+//           setPositionMillis(audio.currentTime * 1000);
+//           if (audio.duration && !isNaN(audio.duration)) {
+//             setDurationMillis(audio.duration * 1000);
+//           }
+//         };
+
+//         audio.onended = () => {
+//           setIsPlaying(false);
+//           setPositionMillis(0);
+//           cleanBackendAudio(track.id);
+//         };
+
+//         // Lancement de la lecture avec capture des erreurs de stream
+//         audio.play()
+//           .then(() => {
+//             setIsPlaying(true);
+//             setIsLoading(false);
+//           })
+//           .catch((err: any) => {
+//             // Si le flux est encore en cours d'initialisation, on ne casse pas l'état
+//             if (err.name !== 'AbortError') {
+//               console.error('Web Audio playback error:', err);
+//               setIsLoading(false);
+//               setIsPlaying(false);
+//             }
+//           });
+
+//         webSoundRef.current = audio;
+//         return;
+//       }
+
+//       setIsLoading(false);
+//       setIsPlaying(false);
+//     } catch (error) {
+//       console.error('Failed to play track:', error);
+//       setIsLoading(false);
+//       setIsPlaying(false);
+//     }
+//   };
+
 
   const togglePlayPause = async () => {
     const nativePlayer = nativePlayerRef.current;
