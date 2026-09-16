@@ -5,6 +5,7 @@ import { FriendsGateway } from './friends.gateway';
 
 @Module({
   providers: [FriendsService, FriendsGateway],
-  controllers: [FriendsController]
+  controllers: [FriendsController],
+  exports: [FriendsGateway]
 })
 export class FriendsModule {}

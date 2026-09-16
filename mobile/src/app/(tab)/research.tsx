@@ -65,62 +65,7 @@ export default function Research() {
 	};
 
 	const hasResults = activeTab === 'Artists' ? artistResults.length > 0 : trackResults.length > 0;
-	const [searchResults, setSearchResults] = useState<any[]>([]);
-	const [pendingRequests, setPendingRequests] = useState<string[]>([]);
 
-	const sendRequest = async (targetId: string) => {
-		const token = await getToken();
-
-		if (!token) return;
-
-		const apiUrl =
-			Platform.OS === "android"
-				? "http://10.0.2.2:3000"
-				: "http://localhost:3000";
-
-		const response = await fetch(`${apiUrl}/friends/request`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${token}`,
-			},
-			body: JSON.stringify({
-				receiverId: targetId,
-			}),
-		});
-
-		const data = await response.json();
-		setPendingRequests((prev) => [...prev, targetId]);
-		console.log(data);
-	};
-
-	useEffect(() => {
-		const searchUsers = async () => {
-			if (!searchQuery.trim()) {
-				setSearchResults([]);
-				return;
-			}
-
-			const token = await getToken();
-			if (!token) return;
-
-			const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
-
-			const response = await fetch(
-				`${apiUrl}/friends/search?q=${encodeURIComponent(searchQuery)}`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
-
-			const data = await response.json();
-			setSearchResults(data);
-		};
-
-		searchUsers();
-	}, [searchQuery]);
 
 	return (
 		<SafeAreaView style={styles.safeArea}>

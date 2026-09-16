@@ -202,6 +202,17 @@ export default function Playlist() {
 								>
 									{track.artist}
 								</Text>
+								<Text
+									style={{
+										fontSize: 11,
+										color: "#8A8A8A",
+									}}
+									numberOfLines={1}
+								>
+									{track.addedBy?.username
+										? `ajouté par ${track.addedBy.username}`
+										: ""}
+								</Text>
 							</View>
 						</TouchableOpacity>
 					))}

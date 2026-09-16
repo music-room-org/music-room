@@ -54,6 +54,9 @@ model User {
   sentRequests Friendship[] @relation("SentRequests")
   receivedRequests Friendship[] @relation("ReceivedRequests")
 
+  playlistCollaborations PlaylistCollaborator[]
+  addedTracks            PlaylistTrack[]
+
 }
 
 model Playlist {
@@ -69,6 +72,8 @@ model Playlist {
   ownerId String
 
   playlistTracks PlaylistTrack[]
+
+  collaborators PlaylistCollaborator[]
 }
 
 model Track {
@@ -91,6 +96,8 @@ model PlaylistTrack {
 	playlistId	String
 	position	Int
 	addedAt		DateTime @default(now())
+  addedById String?
+  addedBy   User? @relation(fields: [addedById], references: [id])
 
   @@id([playlistId, trackId])  
 }
@@ -130,4 +137,17 @@ model Friendship {
   receiverId  String
 
   @@unique([senderId, receiverId])
+}
+
+model PlaylistCollaborator {
+  id  String  @id @default(uuid())
+  status  FriendshipStatus  @default(PENDING)
+
+  playlistId String
+  playlist   Playlist         @relation(fields: [playlistId], references: [id])
+
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+
+  @@unique([playlistId, userId])
 }
