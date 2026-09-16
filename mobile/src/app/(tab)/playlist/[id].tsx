@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Modal, TextInput, Switch, TouchableOpacity, Image, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Plus, Pencil } from "lucide-react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -6,6 +6,7 @@ import { COLORS, FONTS } from "@/constants";
 import { useState, useCallback } from "react";
 import * as SecureStore from "expo-secure-store";
 import { usePlayer } from "@/context/PlayerContext";
+import * as ImagePicker from "expo-image-picker";
 
 async function getToken() {
 	if (Platform.OS === "web")
@@ -22,6 +23,10 @@ export default function Playlist() {
 	const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
 	const [playlistImage, setPlaylistImage] = useState("");
 	const [playlistOwner, setPlaylistOwner] = useState("");
+	const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+	const [editName, setEditName] = useState("");
+	const [editImage, setEditImage] = useState("");
+	const [editIsPublic, setEditIsPublic] = useState(true);
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
@@ -46,8 +51,9 @@ export default function Playlist() {
 
 					console.log("PLAYLIST DATA:", data);
 					setPlaylistName(data.name);
-					setPlaylistImage(data.thumbnail);
+					setPlaylistImage(data.imageUrl);
 					setPlaylistOwner(data.owner?.username || "");
+					setEditIsPublic(data.isPublic);
 
 					if (data.tracks) {
 						setPlaylistTracks(data.tracks);
@@ -58,6 +64,49 @@ export default function Playlist() {
 			};
 		fetchPlaylist();
 	}, [id]));
+
+	const handleSave = async () => {
+		try {
+			const token = await getToken();
+
+			const response = await fetch(
+				`${apiUrl}/playlists/${id}`,
+				{
+					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${token}`,
+					},
+					body: JSON.stringify({
+						name: editName,
+						imageUrl: editImage,
+						isPublic: editIsPublic,
+					}),
+				}
+			);
+
+			if (response.ok) {
+				setPlaylistName(editName);
+				setPlaylistImage(editImage);
+				setIsEditModalVisible(false);
+			}
+		} catch (error) {
+			console.error(error);
+		}
+	};
+
+	const pickImage = async () => {
+		const result = await ImagePicker.launchImageLibraryAsync({
+			mediaTypes: ["images"],
+			quality: 0.8,
+			allowsEditing: true,
+			aspect: [1, 1],
+		});
+
+		if (!result.canceled) {
+			setEditImage(result.assets[0].uri);
+		}
+	};
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -96,7 +145,14 @@ export default function Playlist() {
 					</View>
 
 					<View style={styles.buttonsContainer}>
-						<TouchableOpacity style={styles.infoButton}>
+						<TouchableOpacity 
+							style={styles.infoButton}
+							onPress={() => {
+								setEditName(playlistName);
+								setEditImage(playlistImage);
+								setIsEditModalVisible(true);
+							}}
+						>
 							<Pencil size={16} color="#E7A500"/>
 							<Text style={styles.infoButtonText}>
 								Edit informations
@@ -170,6 +226,88 @@ export default function Playlist() {
 					)}
 				</ScrollView>
 			</View>
+
+			<Modal
+				visible={isEditModalVisible}
+				animationType="fade"
+				transparent
+				onRequestClose={() => setIsEditModalVisible(false)}
+			>
+				<View style={styles.modalOverlay}>
+					<View style={styles.modalContent}>
+						<Text style={styles.modalTitle}>
+							Edit playlist
+						</Text>
+
+						<View style={styles.editHeader}>
+							<TouchableOpacity
+								style={styles.coverPicker}
+								onPress={pickImage}
+								activeOpacity={0.8}
+							>
+								<Image
+									source={{
+										uri:
+											editImage ||
+											playlistImage ||
+											"https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
+									}}
+									style={styles.coverPickerImage}
+								/>
+
+								<View style={styles.coverOverlay}>
+									<Pencil
+										size={20}
+										color="#FFFFFF"
+									/>
+								</View>
+							</TouchableOpacity>
+
+							<View style={styles.editInfos}>
+								<TextInput
+									value={editName}
+									onChangeText={setEditName}
+									placeholder="Playlist name"
+									placeholderTextColor={COLORS.textMuted}
+									style={styles.playlistNameInput}
+								/>
+
+								<View style={styles.publicRow}>
+									<Text style={styles.publicText}>
+										Public playlist
+									</Text>
+
+									<Switch
+										value={editIsPublic}
+										onValueChange={setEditIsPublic}
+									/>
+								</View>
+							</View>
+						</View>
+
+						<View style={styles.modalButtons}>
+							<TouchableOpacity
+								style={styles.cancelButton}
+								onPress={() => setIsEditModalVisible(false)}
+							>
+								<Text style={styles.cancelButtonText}>
+									Cancel
+								</Text>
+							</TouchableOpacity>
+
+							<TouchableOpacity
+								style={styles.saveButton}
+								onPress={handleSave}
+							>
+								<Text style={styles.saveButtonText}>
+									Save
+								</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+			</Modal>
+
 		</SafeAreaView>
 	);
 }
@@ -319,5 +457,138 @@ const styles = StyleSheet.create({
 		fontFamily: FONTS.regular,
 		fontSize: 13,
 		color: COLORS.textPrimary,
-	}
+	},
+	modalOverlay: {
+		flex: 1,
+		justifyContent: "center",
+		backgroundColor: "rgba(0,0,0,0.4)",
+		padding: 24,
+	},
+
+	modalContent: {
+		backgroundColor: COLORS.background,
+		borderRadius: 20,
+		padding: 20,
+	},
+
+	modalTitle: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 18,
+		color: COLORS.textPrimary,
+		marginBottom: 20,
+	},
+
+	modalInput: {
+		height: 48,
+		borderRadius: 12,
+		backgroundColor: "#F5F5F5",
+		paddingHorizontal: 16,
+		color: COLORS.textPrimary,
+		fontFamily: FONTS.regular,
+	},
+
+	modalInputSpacing: {
+		marginBottom: 12,
+	},
+
+	modalSwitchRow: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginTop: 20,
+	},
+
+	modalSwitchText: {
+		fontFamily: FONTS.medium,
+		color: COLORS.textPrimary,
+	},
+
+	modalButtons: {
+		flexDirection: "row",
+		gap: 10,
+		marginTop: 24,
+	},
+
+	cancelButton: {
+		flex: 1,
+		height: 48,
+		borderRadius: 24,
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "#EAEAEA",
+	},
+
+	saveButton: {
+		flex: 1,
+		height: 48,
+		borderRadius: 24,
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: COLORS.primary,
+	},
+
+	cancelButtonText: {
+		fontFamily: FONTS.semiBold,
+		color: COLORS.textPrimary,
+	},
+
+	saveButtonText: {
+		fontFamily: FONTS.semiBold,
+		color: COLORS.white,
+	},
+	editHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 24,
+	},
+
+	coverPicker: {
+		position: "relative",
+	},
+
+	coverPickerImage: {
+		width: 90,
+		height: 90,
+		borderRadius: 10,
+		opacity: 0.75,
+	},
+
+	coverOverlay: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		borderRadius: 10,
+		backgroundColor: "rgba(0,0,0,0.35)",
+		justifyContent: "center",
+		alignItems: "center",
+	},
+
+	editInfos: {
+		flex: 1,
+		marginLeft: 18,
+	},
+
+	playlistNameInput: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 18,
+		color: COLORS.textPrimary,
+		borderBottomWidth: 1,
+		borderBottomColor: "#E5E5E5",
+		paddingBottom: 8,
+	},
+
+	publicRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		marginTop: 16,
+	},
+
+	publicText: {
+		fontFamily: FONTS.medium,
+		fontSize: 14,
+		color: COLORS.textPrimary,
+	},
 });

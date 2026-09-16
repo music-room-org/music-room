@@ -94,3 +94,21 @@ export async function addTrackToPlaylist(playlistId: string, title: string, arti
 		},
 	});
 }
+
+export async function updatePlaylist(
+	playlistId: string, 
+	name: string,
+	imageUrl: string,
+	isPublic: boolean,
+) {
+	return await prisma.playlist.update({
+		where: {
+			id: playlistId,
+		},
+		data: {
+			name,
+			imageUrl,
+			isPublic,
+		},
+	});
+}
