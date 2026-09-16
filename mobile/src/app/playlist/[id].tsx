@@ -1,23 +1,11 @@
-import {
-	View,
-	Text,
-	StyleSheet,
-	TouchableOpacity,
-	Image,
-	Platform,
-	ScrollView,
-} from "react-native";
-
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-	ChevronLeft,
-	Plus,
-} from "lucide-react-native";
-
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronLeft, Plus } from "lucide-react-native";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import * as SecureStore from "expo-secure-store";
+import { usePlayer } from "@/context/PlayerContext";
 
 const mockRecommendedTitles = [
 	{
@@ -45,6 +33,7 @@ async function getToken() {
 export default function Playlist() {
 	const { id } = useLocalSearchParams();
 	const router = useRouter();
+	const { playTrack } = usePlayer();
 
 	const [playlistName, setPlaylistName] = useState("");
 	const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
@@ -53,38 +42,38 @@ export default function Playlist() {
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
-	useEffect(() => {
-		const fetchPlaylist = async () => {
-			try {
-				
-				const token = await getToken();
+	useFocusEffect(
+		useCallback(() => {
+			const fetchPlaylist = async () => {
+				try {
+					
+					const token = await getToken();
 
-				if (!token) return;
+					if (!token) return;
 
-				const response = await fetch(`${apiUrl}/playlists/${id}`, {
-					method: "GET",
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				});
+					const response = await fetch(`${apiUrl}/playlists/${id}`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					});
 
-				console.log("STATUS:", response.status);
-				const data = await response.json();
+					console.log("STATUS:", response.status);
+					const data = await response.json();
 
-				console.log("PLAYLIST DATA:", data);
-				setPlaylistName(data.name);
-				setPlaylistImage(data.imageUrl);
+					console.log("PLAYLIST DATA:", data);
+					setPlaylistName(data.name);
+					setPlaylistImage(data.imageUrl);
 
-				if (data.tracks) {
-					setPlaylistTracks(data.tracks);
+					if (data.tracks) {
+						setPlaylistTracks(data.tracks);
+					}
+				} catch (error) {
+					console.error(error);
 				}
-			} catch (error) {
-				console.error(error);
-			}
-		};
-
+			};
 		fetchPlaylist();
-	}, [id]);
+	}, [id]));
 
 	const handleAddTrack = async (track: typeof mockRecommendedTitles[0]) => {
 		try {
@@ -138,9 +127,7 @@ export default function Playlist() {
 
 					<View style={styles.playlistInfo}>
 						<Image
-							source={{
-								uri: playlistImage || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
-							}}
+							source={{ uri: playlistImage || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png" }}
 							style={styles.cover}
 						/>
 
@@ -177,10 +164,12 @@ export default function Playlist() {
 					<View style={styles.divider} />
 
 					{playlistTracks.map((track) => (
-						<View
+						<TouchableOpacity
 							key={track.id}
 							style={styles.trackItem}
+							onPress={() => playTrack(track)}
 						>
+
 							<Image
 								source={{
 									uri: track.imageUrl,
@@ -203,7 +192,7 @@ export default function Playlist() {
 									{track.artist}
 								</Text>
 							</View>
-						</View>
+						</TouchableOpacity>
 					))}
 
 					{playlistTracks.length === 0 && (

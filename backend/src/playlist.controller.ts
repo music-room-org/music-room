@@ -1,20 +1,5 @@
-import {
-	Controller,
-	Post,
-	Get,
-	Body,
-	Param,
-	UseGuards,
-	Request,
-} from '@nestjs/common';
-import {
-	createPlaylist,
-	getPublicPlaylists,
-	getMyPlaylists,
-	getPlaylistById,
-	getUserPublicPlaylists,
-	addTrackToPlaylist
-} from './services/playlist';
+import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { createPlaylist, getPublicPlaylists, getMyPlaylists, getPlaylistById, getUserPublicPlaylists, addTrackToPlaylist } from './services/playlist';
 import { Guard } from './security/guard';
 
 @Controller('playlists')
@@ -33,9 +18,12 @@ export class PlaylistController {
 	@Post(':id/tracks')
 	async addTrack(
 		@Param('id') playlistId: string,
-		@Body('trackId') trackId: string,
+		@Body('title') title: string,
+		@Body('artist') artist: string,
+		@Body('sourceId') sourceId: string,
+
 	) {
-		return addTrackToPlaylist(playlistId, trackId);
+		return addTrackToPlaylist(playlistId, title, artist, sourceId);
 	}
 
 	@UseGuards(Guard)

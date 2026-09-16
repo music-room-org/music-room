@@ -18,9 +18,9 @@ export default function PlaylistSearch() {
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
-	const handleAddTitle = async (trackId: string) => {
+	const handleAddTitle = async (track: any) => {
 		try {
-			const token = await SecureStore.getItemAsync("token");
+			const token = await SecureStore.getItemAsync("userToken");
 
 			const response = await fetch(
 				`${apiUrl}/playlists/${id}/tracks`,
@@ -31,13 +31,15 @@ export default function PlaylistSearch() {
 						Authorization: `Bearer ${token}`,
 					},
 					body: JSON.stringify({
-						trackId: trackId,
+						title: track.title,
+						artist: track.artist,
+						sourceId: track.id,
 					}),
 				}
 			);
 
 			if (response.ok) {
-				setAddedTrackIds((prev) => [...prev, trackId]);
+				setAddedTrackIds((prev) => [...prev, track.id]);
 			}
 
 		} catch (error) {
@@ -45,9 +47,9 @@ export default function PlaylistSearch() {
 		}
 	};
 
-	const handleSearch = async (query: string) => {
-		setSearchQuery(query);
-		if (!query.trim()) {
+	const handleSearch = async () => {
+
+		if (!searchQuery.trim()) {
 			setTrackResults([]);
 			return;
 		}
@@ -55,7 +57,7 @@ export default function PlaylistSearch() {
 		try {
 			setIsSearching(true);
 
-			const res = await fetch(`${API_BASE_URL}/player/artists?q=${encodeURIComponent(query)}`);
+			const res = await fetch(`${API_BASE_URL}/player/search?q=${encodeURIComponent(searchQuery)}`);
 				
 			if (res.ok) {
 				const data = await res.json();
@@ -95,7 +97,7 @@ export default function PlaylistSearch() {
 					<TextInput
 						value={searchQuery}
 						onChangeText={setSearchQuery}
-						onSubmitEditing={() => handleSearch(searchQuery)}
+						onSubmitEditing={handleSearch}
 						placeholder="Search for a title or an artist"
 						placeholderTextColor={COLORS.textMuted}
 						style={styles.searchInput}
@@ -116,15 +118,9 @@ export default function PlaylistSearch() {
 								disabled={addedTrackIds.includes(track.id)}
 							>
 								{addedTrackIds.includes(track.id) ? (
-									<Check
-										size={24}
-										color="green"
-									/>
+									<Check size={24} color="green"/>
 								) : (
-									<Plus
-										size={24}
-										color={COLORS.textPrimary}
-									/>
+									<Plus size={24} color={COLORS.textPrimary}/>
 								)}
 							</TouchableOpacity>
 						</View>

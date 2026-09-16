@@ -18,9 +18,28 @@ export async function createPlaylist(name: string, ownerId: string) {
 
 // Récupérer UNE playlist par son id
 export async function getPlaylistById(id: string) {
-	return await prisma.playlist.findUnique({
+
+	const playlist = await prisma.playlist.findUnique({
 		where: { id: id },
+		include: { 
+			playlistTracks: {
+				include: {
+					track: true,
+				},
+			},
+		},
 	});
+
+	if (!playlist)
+		return null;
+
+	return {
+		...playlist,
+		tracks: playlist.playlistTracks.map((pt) => ({
+			...pt.track,
+			imageUrl: `https://i.ytimg.com/vi/${pt.track.sourceId}/hqdefault.jpg`,
+		})),
+	};
 }
 
 // Récupérer les playlists d'un utilisateur (les siennes)
@@ -47,11 +66,27 @@ export async function getUserPublicPlaylists(ownerId: string) {
 	});
 }
 
-export async function addTrackToPlaylist(playlistId: string, trackId: string) {
+export async function addTrackToPlaylist(playlistId: string, title: string, artist: string, sourceId: string) {
+	let track = await prisma.track.findFirst({
+		where: {
+			sourceId,
+		},
+	});
+
+	if (!track) {
+		track = await prisma.track.create({
+			data: {
+				title,
+				artist,
+				sourceId,
+			},
+		});
+	}
+	
 	return prisma.playlistTrack.create({
 		data: {
 			playlistId,
-			trackId,
+			trackId: track.id,
 			position: 0,
 		},
 	});
