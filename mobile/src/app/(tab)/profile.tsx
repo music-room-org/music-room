@@ -5,7 +5,6 @@ import { useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { ProfileStat, ProfileActionButton, ActivityItem, FriendAvatar } from "@/components";
 import { useState, useCallback } from "react";
-import { useFocusEffect } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 
 export default function Profile() {
