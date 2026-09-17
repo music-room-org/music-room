@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { CurrentlyPlayingCard, PlaylistCard } from "@/components";
 import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/fonts";
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from "react-native";
 import { useFocusEffect, useRouter } from 'expo-router';
 
 export function HomeScreen() {
