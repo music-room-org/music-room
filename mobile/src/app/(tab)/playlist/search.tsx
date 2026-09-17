@@ -20,7 +20,7 @@ export default function PlaylistSearch() {
 
 	const handleAddTitle = async (track: any) => {
 		try {
-			const token = await SecureStore.getItemAsync("userToken");
+			const token = Platform.OS === "web" ? localStorage.getItem("userToken") : await SecureStore.getItemAsync("userToken");
 
 			const response = await fetch(
 				`${apiUrl}/playlists/${id}/tracks`,
@@ -47,9 +47,9 @@ export default function PlaylistSearch() {
 		}
 	};
 
-	const handleSearch = async () => {
-
-		if (!searchQuery.trim()) {
+	const handleSearch = async (text: string) => {
+		setSearchQuery(text);
+		if (!text.trim()) {
 			setTrackResults([]);
 			return;
 		}
@@ -111,8 +111,8 @@ export default function PlaylistSearch() {
 
 					<TextInput
 						value={searchQuery}
-						onChangeText={setSearchQuery}
-						onSubmitEditing={handleSearch}
+						onChangeText={handleSearch}
+						onSubmitEditing={() => handleSearch(searchQuery)}
 						placeholder="Search for a title or an artist"
 						placeholderTextColor={COLORS.textMuted}
 						style={styles.searchInput}

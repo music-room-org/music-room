@@ -4,33 +4,34 @@ const prisma = new PrismaClient();
 
 // Créer une playlist
 export async function createPlaylist(name: string, ownerId: string) {
-  if (!name) throw new Error('Le nom de la playlist est obligatoire');
-  const playlist = await prisma.playlist.create({
-	data: {
-	  name: name,
-	  ownerId: ownerId,
-	  imageUrl: "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png"
-	}
-  });
-  return playlist;
+	if (!name) throw new Error('Le nom de la playlist est obligatoire');
+	const playlist = await prisma.playlist.create({
+		data: {
+			name: name,
+			ownerId: ownerId,
+			imageUrl: "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png"
+		}
+	});
+	return playlist;
 }
 
 // Récupérer UNE playlist par son id
 export async function getPlaylistById(id: string) {
-  const playlist = await prisma.playlist.findUnique({
+	const playlist = await prisma.playlist.findUnique({
 	where: { id: id },
 	include: { 
-	  owner: true,
-	  playlistTracks: {
+		owner: true,
+		collaborators: true,
+		playlistTracks: {
 		include: {
-		  track: true,
-		  addedBy: true,
+			track: true,
+			addedBy: true,
 		}
-	  }
+		}
 	}
-  });
+});
 
-  if (!playlist) return null;
+	if (!playlist) return null;
 
   return {
 	...playlist,
@@ -61,8 +62,9 @@ export async function getMyPlaylists(ownerId: string) {
 	  ]
 	},
 	include: {
-		owner: true,
-	}
+	  owner: true,
+	  collaborators: true, // <-- Ajoute cette ligne
+	},
   });
 }
 

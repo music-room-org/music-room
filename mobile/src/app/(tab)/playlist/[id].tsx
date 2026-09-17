@@ -27,6 +27,7 @@ export default function Playlist() {
 	const [editName, setEditName] = useState("");
 	const [editImage, setEditImage] = useState("");
 	const [editIsPublic, setEditIsPublic] = useState(true);
+	const [isCollaborative, setIsCollaborative] = useState(false);
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
@@ -53,6 +54,7 @@ export default function Playlist() {
 					setPlaylistName(data.name);
 					setPlaylistImage(data.imageUrl);
 					setPlaylistOwner(data.owner?.username || "");
+					setIsCollaborative(data.collaborators && data.collaborators.length > 0);
 					setEditIsPublic(data.isPublic);
 
 					if (data.tracks) {
@@ -117,7 +119,7 @@ export default function Playlist() {
 				>
 					<View style={styles.header}>
 						<TouchableOpacity
-							onPress={() => router.back()}
+							onPress={() => router.push("/library")}
 							style={styles.backButton}
 						>
 							<ChevronLeft
@@ -139,7 +141,7 @@ export default function Playlist() {
 							</Text>
 
 							<Text style={styles.playlistAuthor}>
-								Playlist by {playlistOwner}
+								{isCollaborative ? "Collaborative playlist by" : "Playlist by"} {playlistOwner}
 							</Text>
 						</View>
 					</View>
@@ -202,16 +204,8 @@ export default function Playlist() {
 								>
 									{track.artist}
 								</Text>
-								<Text
-									style={{
-										fontSize: 11,
-										color: "#8A8A8A",
-									}}
-									numberOfLines={1}
-								>
-									{track.addedBy?.username
-										? `ajouté par ${track.addedBy.username}`
-										: ""}
+								<Text style={{ fontSize: 11, color: "#8A8A8A" }} numberOfLines={1}>
+									{isCollaborative && track.addedBy?.username ? `added by ${track.addedBy.username}` : ""}
 								</Text>
 							</View>
 						</TouchableOpacity>

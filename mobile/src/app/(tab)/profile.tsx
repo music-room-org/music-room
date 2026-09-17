@@ -172,7 +172,7 @@ export default function Profile() {
 			<ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 				<View style={styles.header}>
 					<View style={styles.headerTopRow}>
-						<ChevronLeft color={COLORS.textPrimary} />
+						<ChevronLeft color="white" />
 						<TouchableOpacity onPress={() => setIsModalVisible(true)} style={styles.bellContainer}>
 							<Bell size={24} color={COLORS.textPrimary} />
 							{(friendRequests.length > 0 || collabRequests.length > 0) && (
