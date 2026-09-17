@@ -11,15 +11,11 @@ interface LibraryPlaylistItemProps {
 export function LibraryPlaylistItem({ title, author, imageUrl }: LibraryPlaylistItemProps) {
 	return (
 		<View style={styles.container}>
-			<Image style={styles.image} src={imageUrl}></Image>
+			<Image style={styles.image} source={{ uri: imageUrl }}></Image>
 			<View style={styles.textContainer}>
 				<Text style={styles.title}>{title}</Text>
 				<Text style={styles.author}>{author}</Text>
 			</View>
-			<TouchableOpacity style={styles.playButton}>
-				<Play color={COLORS.primary} fill={COLORS.primary} size={20} />
-			</TouchableOpacity>
-
 		</View>
 	)
 }

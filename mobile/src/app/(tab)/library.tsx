@@ -1,10 +1,86 @@
-import { View, ScrollView, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity, StyleSheet, Platform, Modal, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, PlusCircle } from "lucide-react-native";
+import { Search, PlusCircle, List, User } from "lucide-react-native";
 import { COLORS, FONTS } from "@/constants";
 import { LibraryPlaylistItem } from "@/components";
+import { useState, useCallback } from "react";
+import { useFocusEffect, useRoute, useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+
+async function getToken() {
+	if (Platform.OS === "web")
+		return localStorage.getItem("userToken");
+	return await SecureStore.getItemAsync("userToken");
+}
 
 export default function Library() {
+	
+	const router = useRouter();
+	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+	const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+	const [newPlaylistName, setNewPlaylistName] = useState("");
+	const [myPlaylists, setMyPlaylists] = useState([]);
+	const [isTypeMenuVisible, setIsTypeMenuVisible] = useState(false);
+
+	const handleCreatePlaylist = async () => {
+		try {
+			const token = await getToken();
+
+			if (!token)
+				return;
+
+			const response = await fetch(`${apiUrl}/playlists`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					name: newPlaylistName,
+				}),
+			});
+
+			const newPlaylist = await response.json();
+
+			setIsCreateModalVisible(false);
+			setNewPlaylistName("");
+
+			router.push(`/playlist/${newPlaylist.id}`);
+		} catch (error) {
+			console.error(error);
+		}
+	};
+
+	useFocusEffect(
+		useCallback(() => {
+			const fetchPlaylists = async () => {
+				try {
+					const token = await getToken();
+
+					if (!token)
+						return;
+
+					console.log("TOKEN:", token);
+					const response = await fetch(`${apiUrl}/playlists/mine`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					});
+
+					const data = await response.json();
+					console.log("PLAYLISTS:", data);
+					setMyPlaylists(data);
+				} catch (error) {
+					console.error(error);
+				}
+			};
+
+			fetchPlaylists();
+		}, [])
+	);
+
+
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -15,7 +91,7 @@ export default function Library() {
 							<TouchableOpacity>
 								<Search size={26} color={COLORS.textMuted}/>
 							</TouchableOpacity>
-							<TouchableOpacity style={styles.actionIcon}>
+							<TouchableOpacity style={styles.actionIcon} onPress={() => setIsTypeMenuVisible(true)}>
 								<PlusCircle size={26} color={COLORS.textMuted}/>
 							</TouchableOpacity>
 						</View>
@@ -23,43 +99,120 @@ export default function Library() {
 					<View style={styles.yellowLine}></View>
 				</View>
 				<View style={styles.listContainer}>
-					<LibraryPlaylistItem 
-						title="this is a title"
-						author="me"
-						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-					/>
+					{myPlaylists.map((playlist: any) => (
 
-					<LibraryPlaylistItem 
-						title="this is a title"
-						author="me"
-						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-					/>
+						<TouchableOpacity
+							key={playlist.id}
+							onPress={() => router.push(`/playlist/${playlist.id}`)}
+						>
+							<LibraryPlaylistItem
+								title={playlist.name}
+								author="me"
+								imageUrl={playlist.imageUrl || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png"}
+							/>
+						</TouchableOpacity>
 
-					<LibraryPlaylistItem 
-						title="this is a title"
-						author="me"
-						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-					/>
-
-					<LibraryPlaylistItem 
-						title="this is a title"
-						author="me"
-						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-					/>
-
-					<LibraryPlaylistItem 
-						title="this is a title"
-						author="me"
-						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-					/>
-
-					<LibraryPlaylistItem 
-						title="this is a title"
-						author="me"
-						imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-					/>
+					))}
 				</View>
 			</ScrollView>
+			
+			<Modal
+				visible={isTypeMenuVisible}
+				transparent={true}
+				animationType="slide"
+				onRequestClose={() => setIsTypeMenuVisible(false)}
+			>
+				<View style={styles.typeMenuOverlay}>
+					<View style={styles.typeMenu}>
+						<TouchableOpacity
+							style={styles.typeMenuItem}
+							onPress={() => {
+								setIsTypeMenuVisible(false);
+								setIsCreateModalVisible(true);
+							}}
+						>
+							<List size={24} color={COLORS.textPrimary} />
+								<Text style={styles.typeMenuText}>
+									Playlist classique
+								</Text>
+						</TouchableOpacity>
+
+						<TouchableOpacity
+							style={styles.typeMenuItem}
+							onPress={() => {
+								setIsTypeMenuVisible(false);
+								setIsCreateModalVisible(true);
+							}}
+						>
+							<User size={24} color={COLORS.textPrimary} />
+								<Text style={styles.typeMenuText}>
+									Playlist collaborative
+								</Text>
+						</TouchableOpacity>
+					</View>
+
+				</View>
+
+
+			</Modal>
+
+
+			<Modal
+				visible={isCreateModalVisible}
+				transparent={true}
+				animationType="fade"
+			>
+				<View
+					style={{
+						flex: 1,
+						backgroundColor: "rgba(0,0,0,0.5)",
+						justifyContent: "center",
+						alignItems: "center",
+					}}
+				>
+					<View
+						style={{
+							width: "80%",
+							backgroundColor: "white",
+							borderRadius: 12,
+							padding: 20,
+						}}
+					>
+						<TextInput
+							value={newPlaylistName}
+							onChangeText={setNewPlaylistName}
+							placeholder="Playlist name"
+							style={{
+								borderWidth: 1,
+								borderColor: "#ddd",
+								color: "#777373",
+								borderRadius: 8,
+								padding: 12,
+								marginBottom: 16,
+							}}
+						/>
+
+						<View
+							style={{
+								flexDirection: "row",
+								justifyContent: "flex-end",
+							}}
+						>
+							<TouchableOpacity
+								onPress={() => setIsCreateModalVisible(false)}
+								style={{ marginRight: 16 }}
+							>
+								<Text>Cancel</Text>
+							</TouchableOpacity>
+
+							<TouchableOpacity onPress={handleCreatePlaylist}>
+								<Text>Create</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+			</Modal>
+
 		</SafeAreaView>
 	)
 }
@@ -102,6 +255,32 @@ const styles = StyleSheet.create({
 		borderRadius: 2,
 		marginTop: 16
 	},
+	typeMenuOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "flex-end",
+    },
+
+    typeMenu: {
+        backgroundColor: COLORS.background,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 24,
+        paddingBottom: 40,
+    },
+
+    typeMenuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 18,
+    },
+
+    typeMenuText: {
+        marginLeft: 16,
+        fontFamily: FONTS.semiBold,
+        fontSize: 17,
+        color: COLORS.textPrimary,
+    },
 	listContainer: {
 		marginTop: 8
 	}

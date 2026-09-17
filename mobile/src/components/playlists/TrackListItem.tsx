@@ -8,9 +8,10 @@ interface TrackListItemProps {
 	imageUrl: string;
 	onPress?: () => void;
 	isPlaying?: boolean;
+	showPlayButton?: boolean;
 }
 
-export function TrackListItem({ title, subtitle, imageUrl, onPress, isPlaying }: TrackListItemProps) {
+export function TrackListItem({ title, subtitle, imageUrl, onPress, isPlaying, showPlayButton = true }: TrackListItemProps) {
 	return (
 		<TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
 			<Image source={{ uri: imageUrl }} style={styles.image} />
@@ -18,13 +19,15 @@ export function TrackListItem({ title, subtitle, imageUrl, onPress, isPlaying }:
 				<Text style={styles.title} numberOfLines={1}>{title}</Text>
 				<Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
 			</View>
-			<TouchableOpacity style={styles.playButton} onPress={onPress}>
-				{isPlaying ? (
-					<Pause color={COLORS.primary} fill={COLORS.primary} size={18} />
-				) : (
-					<Play color={COLORS.primary} fill={COLORS.primary} size={18} />
-				)}
-			</TouchableOpacity>
+			{showPlayButton && (
+				<TouchableOpacity style={styles.playButton} onPress={onPress}>
+					{isPlaying ? (
+						<Pause color={COLORS.primary} fill={COLORS.primary} size={18} />
+					) : (
+						<Play color={COLORS.primary} fill={COLORS.primary} size={18} />
+					)}
+				</TouchableOpacity>
+			)}
 		</TouchableOpacity>
 	)
 }
