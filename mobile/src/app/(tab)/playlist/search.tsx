@@ -79,7 +79,7 @@ export default function PlaylistSearch() {
 				<View style={styles.header}>
 
 					<TouchableOpacity
-						onPress={() => router.back()}
+						onPress={() => router.push("/library")}
 						style={styles.backButton}
 					>
 						<ChevronLeft
