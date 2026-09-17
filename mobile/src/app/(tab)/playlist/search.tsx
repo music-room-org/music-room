@@ -7,6 +7,12 @@ import { useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { TrackListItem } from "@/components";
 
+async function getToken() {
+	if (Platform.OS === "web")
+		return localStorage.getItem("userToken");
+	return await SecureStore.getItemAsync("userToken");
+}
+
 export default function PlaylistSearch() {
 	const { id } = useLocalSearchParams();
 	const router = useRouter();
@@ -20,7 +26,7 @@ export default function PlaylistSearch() {
 
 	const handleAddTitle = async (track: any) => {
 		try {
-			const token = await SecureStore.getItemAsync("userToken");
+			const token = await getToken();
 
 			const response = await fetch(
 				`${apiUrl}/playlists/${id}/tracks`,
