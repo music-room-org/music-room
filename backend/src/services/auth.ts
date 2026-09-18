@@ -4,8 +4,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import * as nodemailer from "nodemailer";
+import { PrismaClient } from "generated/prisma/client";
 
-const prisma = PrismaService;
+const prisma = new PrismaClient();
 const client = new OAuth2Client("119307991318-6q08olkvff98ol795k125ff5boh9ng8l.apps.googleusercontent.com")
 
 const transporter = nodemailer.createTransport({
