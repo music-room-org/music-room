@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 
-const prisma = new PrismaClient();
+const prisma = PrismaService;
 
 // Créer une playlist
 export async function createPlaylist(name: string, ownerId: string) {
