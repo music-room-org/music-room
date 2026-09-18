@@ -1,6 +1,6 @@
-import { View, ScrollView, Text, TouchableOpacity, StyleSheet, Platform, Modal, TextInput } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity, StyleSheet, Platform, Modal, TextInput, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, PlusCircle, List, User, X } from "lucide-react-native";
+import { Search, PlusCircle, List, User, X, Radio } from "lucide-react-native";
 import { COLORS, FONTS } from "@/constants";
 import { LibraryPlaylistItem } from "@/components";
 import { useState, useCallback } from "react";
@@ -8,7 +8,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 
 async function getToken() {
-	if (Platform.OS === "web") return localStorage.getItem("userToken");
+	if (Platform.OS === "web") 
+		return localStorage.getItem("userToken");
 	return await SecureStore.getItemAsync("userToken");
 }
 
@@ -21,49 +22,61 @@ export default function Library() {
 	const [myPlaylists, setMyPlaylists] = useState([]);
 	const [isTypeMenuVisible, setIsTypeMenuVisible] = useState(false);
 	const [friendSearchQuery, setFriendSearchQuery] = useState("");
+	
 	const [selectedFriends, setSelectedFriends] = useState<{id: string, username: string}[]>([]);
 	const [friendsList, setFriendsList] = useState<any[]>([]);
 	const [myUsername, setMyUsername] = useState("");
+	
 	const [isCollabMode, setIsCollabMode] = useState(false);
+	const [isLiveMode, setIsLiveMode] = useState(false);
+	const [isPublic, setIsPublic] = useState(true);
 
 	const handleCreatePlaylist = async () => {
-
 		if (!newPlaylistName.trim()) {
-			alert("Please enter a playlist name.");
+			alert("Please enter a name.");
 			return;
 		}
 
-		if (isCollabMode && selectedFriends.length === 0) {
-			alert("Please select at least one friend for a collaborative playlist.");
-			return;
-		}
-		
 		try {
 			const token = await getToken();
 			if (!token) return;
 
+			if (isLiveMode) {
+				const response = await fetch(`${apiUrl}/live_session`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+					body: JSON.stringify({ name: newPlaylistName, isPublic }),
+				});
+				const newLive = await response.json();
+				
+				setIsCreateModalVisible(false);
+				setNewPlaylistName("");
+				setIsLiveMode(false);
+				router.push(`/live/${newLive.id}`);
+				return;
+			}
+
+			if (isCollabMode && selectedFriends.length === 0) {
+				alert("Please select at least one friend for a collaborative playlist.");
+				return;
+			}
+
 			const response = await fetch(`${apiUrl}/playlists`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
+				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
 				body: JSON.stringify({ name: newPlaylistName }),
 			});
 			const newPlaylist = await response.json();
 
 			if (isCollabMode && selectedFriends.length > 0) {
-			for (const friend of selectedFriends) {
-				await fetch(`${apiUrl}/playlists/${newPlaylist.id}/collaborators`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({ userId: friend.id }),
-				});
+				for (const friend of selectedFriends) {
+					await fetch(`${apiUrl}/playlists/${newPlaylist.id}/collaborators`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+						body: JSON.stringify({ userId: friend.id }),
+					});
+				}
 			}
-		}
 
 			setIsCreateModalVisible(false);
 			setNewPlaylistName("");
@@ -143,7 +156,7 @@ export default function Library() {
 						<TouchableOpacity key={playlist.id} onPress={() => router.push(`/playlist/${playlist.id}`)}>
 							<LibraryPlaylistItem 
 								title={playlist.name} 
-								author={playlist.collaborators?.length > 0 ? `Collaborative playlist by ${playlist.owner?.username || myUsername}` : `Playlist by ${playlist.owner?.username || myUsername}`}
+								author={playlist.collaborators?.length > 0 ? `Collaborative playlist by ${playlist.owner?.username || myUsername}` : `Playlist by ${playlist.owner?.username || myUsername}`} 
 								imageUrl={playlist.imageUrl || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png"} 
 							/>
 						</TouchableOpacity>
@@ -154,13 +167,17 @@ export default function Library() {
 			<Modal visible={isTypeMenuVisible} transparent={true} animationType="slide" onRequestClose={() => setIsTypeMenuVisible(false)}>
 				<View style={styles.typeMenuOverlay}>
 					<View style={styles.typeMenu}>
-						<TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
+						<TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
 							<List size={24} color={COLORS.textPrimary} />
 							<Text style={styles.typeMenuText}> Playlist classique </Text>
 						</TouchableOpacity>
-						<TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(true); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
+						<TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(true); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
 							<User size={24} color={COLORS.textPrimary} />
 							<Text style={styles.typeMenuText}> Playlist collaborative </Text>
+						</TouchableOpacity>
+						<TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(true); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
+							<Radio size={24} color={COLORS.primary} />
+							<Text style={[styles.typeMenuText, { color: COLORS.primary }]}> Live Session Event </Text>
 						</TouchableOpacity>
 					</View>
 				</View>
@@ -172,9 +189,17 @@ export default function Library() {
 						<TextInput 
 							value={newPlaylistName} 
 							onChangeText={setNewPlaylistName} 
-							placeholder="Playlist name" 
+							placeholder={isLiveMode ? "Event Name" : "Playlist name"} 
 							style={styles.modalInput} 
 						/>
+
+						{isLiveMode && (
+							<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+								<Text style={{ fontFamily: FONTS.medium, color: COLORS.textPrimary }}>Public Event (Anyone can vote)</Text>
+								<Switch value={isPublic} onValueChange={setIsPublic} />
+							</View>
+						)}
+
 						{isCollabMode && (
 							<>
 								<View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
@@ -195,11 +220,10 @@ export default function Library() {
 									autoCapitalize="none" 
 									style={styles.modalInputMargin} 
 								/>
-
+								
 								{filteredFriends.map((friend: any) => {
 									const friendUser = friend.sender?.username === myUsername ? friend.receiver : friend.sender;
-
-									// Masque l'ami de la liste de recherche s'il est déjà sélectionné
+									
 									if (selectedFriends.some(f => f.id === friendUser.id)) return null;
 
 									return (
@@ -217,12 +241,14 @@ export default function Library() {
 								})}
 							</>
 						)}
+
 						<View style={styles.modalActions}>
 							<TouchableOpacity onPress={() => {
 								setIsCreateModalVisible(false);
 								setNewPlaylistName("");
 								setFriendSearchQuery("");
 								setSelectedFriends([]);
+								setIsLiveMode(false);
 							}} style={styles.cancelBtn}>
 								<Text>Cancel</Text>
 							</TouchableOpacity>
