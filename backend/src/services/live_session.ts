@@ -86,5 +86,5 @@ export class LiveSessionService {
 
   async getSessionById(sessionId: string) {
 	return await this.prisma.liveSession.findUnique({ where: {id: sessionId } });
-  })
+  }
 }

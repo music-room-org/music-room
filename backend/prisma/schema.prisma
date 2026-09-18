@@ -92,13 +92,25 @@ model PlaylistTrack {
   @@id([playlistId, trackId])  
 }
 
+enum voteLicense {
+	FREE
+	INVITED_ONLY
+	LOCATION_TIME
+}
+
 model LiveSession {
 	id					String		@id @default(uuid())
 	name				String
 	hostUserId			String
 	createdAt			DateTime	@default(now())
 	isPublic			Boolean		@default(true)
-	//TODO rajouter peut etre date et lieu de la session?
+	voteLicense			voteLicense	@default(FREE)
+
+	venueLatitude	Float?
+	venueLongitude	Float?
+	venueRadiusM	Int?
+	voteWindowStart	DateTime?
+	voteWindowEnd	DateTime?
 
 	invitedUsers		User[]
 
