@@ -57,9 +57,7 @@ export default function Playlist() {
 
 					const response = await fetch(`${apiUrl}/playlists/${id}`, {
 						method: "GET",
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
+						headers: { Authorization: `Bearer ${token}` },
 					});
 
 					const data = await response.json();
@@ -74,7 +72,6 @@ export default function Playlist() {
 					if (data.tracks) {
 						setPlaylistTracks(data.tracks);
 					}
-
 				} catch (error) {
 					console.error(error);
 				}
@@ -87,21 +84,11 @@ export default function Playlist() {
 	const handleSave = async () => {
 		try {
 			const token = await getToken();
-			const response = await fetch(
-				`${apiUrl}/playlists/${id}`,
-				{
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({
-						name: editName,
-						imageUrl: editImage,
-						isPublic: editIsPublic,
-					}),
-				}
-			);
+			const response = await fetch(`${apiUrl}/playlists/${id}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+				body: JSON.stringify({ name: editName, imageUrl: editImage, isPublic: editIsPublic }),
+			});
 
 			if (response.ok) {
 				setPlaylistName(editName);
@@ -111,10 +98,7 @@ export default function Playlist() {
 					for (const friend of newCollaborators) {
 						await fetch(`${apiUrl}/playlists/${id}/collaborators`, {
 							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								Authorization: `Bearer ${token}`,
-							},
+							headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
 							body: JSON.stringify({ userId: friend.id }),
 						});
 					}
@@ -124,7 +108,6 @@ export default function Playlist() {
 				setNewCollaborators([]);
 				setFriendSearchQuery("");
 			}
-
 		} catch (error) {
 			console.error(error);
 		}
@@ -150,6 +133,10 @@ export default function Playlist() {
 			return friendUser?.username?.toLowerCase().includes(friendSearchQuery.toLowerCase());
 		});
 
+	// PERMISSIONS STRICTES :
+	const isOwner = playlistOwner === myUsername;
+	const canAddTitles = editIsPublic || isOwner || isCollaborative;
+
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<View style={styles.container}>
@@ -169,16 +156,20 @@ export default function Playlist() {
 					</View>
 
 					<View style={styles.buttonsContainer}>
-						<TouchableOpacity style={styles.infoButton} onPress={() => {
-							setEditName(playlistName);
-							setEditImage(playlistImage);
-							setIsEditModalVisible(true);
-						}}>
-							<Pencil size={16} color="#E7A500"/>
-							<Text style={styles.infoButtonText}> Edit informations </Text>
-						</TouchableOpacity>
+						{/* Seul le propriétaire peut éditer la playlist */}
+						{isOwner && (
+							<TouchableOpacity style={styles.infoButton} onPress={() => {
+								setEditName(playlistName);
+								setEditImage(playlistImage);
+								setIsEditModalVisible(true);
+							}}>
+								<Pencil size={16} color="#E7A500"/>
+								<Text style={styles.infoButtonText}> Edit informations </Text>
+							</TouchableOpacity>
+						)}
 
-						{playlistTracks.length > 0 && (
+						{/* On peut ajouter des titres si c'est public, ou si on est owner/collab */}
+						{canAddTitles && playlistTracks.length > 0 && (
 							<TouchableOpacity style={styles.infoButton} onPress={() => { router.push(`/playlist/search?id=${id}`)}}>
 								<Plus size={18} color="#E7A500"/>
 								<Text style={styles.infoButtonText}> Add titles </Text>
@@ -207,7 +198,7 @@ export default function Playlist() {
 						</View>
 					)}
 
-					{playlistTracks.length === 0 && (
+					{canAddTitles && playlistTracks.length === 0 && (
 						<TouchableOpacity style={styles.addTitlesButton} onPress={() => router.push(`/playlist/search?id=${id}`)}>
 							<Text style={styles.addTitlesText}> Add new titles </Text>
 						</TouchableOpacity>

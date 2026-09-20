@@ -72,6 +72,7 @@ export async function getMyPlaylists(ownerId: string) {
 export async function getPublicPlaylists() {
   return await prisma.playlist.findMany({
 	where: { isPublic: true },
+	include: { owner: true },
   });
 }
 
@@ -153,5 +154,14 @@ export async function getPendingCollaborations(userId: string) {
 		include: { owner: true }
 	  }
 	}
+  });
+}
+
+export async function getRecommendedPlaylists() {
+  return await prisma.playlist.findMany({
+    where: { 
+        owner: { email: 'admin@music-room.com' } 
+    },
+    include: { owner: true },
   });
 }

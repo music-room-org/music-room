@@ -104,16 +104,25 @@ model PlaylistTrack {
   @@id([playlistId, trackId])  
 }
 
+enum LicenseType {
+  OPEN
+  INVITED_ONLY
+  LOCATION_TIME
+}
+
 model LiveSession {
 	id					String		@id @default(uuid())
 	name				String
-	hostUserId			String
-	createdAt			DateTime	@default(now())
-	isPublic			Boolean		@default(true)
-	//TODO rajouter peut etre date et lieu de la session?
+	hostUserId	String
+	createdAt		DateTime	@default(now())
 
+	isPublic		Boolean		@default(true)
+  license      LicenseType  @default(OPEN)
+  latitude            Float?
+  longitude           Float?
+  startTime           DateTime?
+  endTime             DateTime?
 	invitedUsers		User[]
-
 	liveSessionTracks	LiveSessionTrack[]
 }
 

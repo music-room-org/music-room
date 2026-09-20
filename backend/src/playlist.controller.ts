@@ -1,5 +1,5 @@
 import { Controller, Post, Get, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
-import { createPlaylist, getPublicPlaylists, getMyPlaylists, getPlaylistById, updatePlaylist, getUserPublicPlaylists, addTrackToPlaylist, inviteCollaborator, updateCollaborationStatus, getPendingCollaborations } from './services/playlist';
+import { createPlaylist, getPublicPlaylists, getMyPlaylists, getRecommendedPlaylists, getPlaylistById, updatePlaylist, getUserPublicPlaylists, addTrackToPlaylist, inviteCollaborator, updateCollaborationStatus, getPendingCollaborations } from './services/playlist';
 import { Guard } from './security/guard';
 import { FriendsGateway } from './friends/friends.gateway';
 
@@ -56,6 +56,11 @@ export class PlaylistController {
   async findUserPlaylists(@Param('ownerId') ownerId: string) {
 	return await getUserPublicPlaylists(ownerId);
   }
+
+  @Get('recommended')
+    async findRecommended() {
+        return await getRecommendedPlaylists();
+    }
 
   @UseGuards(Guard)
   @Get(':id')
