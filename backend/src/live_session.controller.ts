@@ -121,17 +121,19 @@ export class LiveSessionController {
     }
 
     @UseGuards(Guard)
-    @Delete(':id')
-    async endLiveSession(@Param('id') sessionId: string, @Req() req: any) {
+    @Delete(':id/tracks/:trackId')
+    async removeTrackFromLive(@Param('id') sessionId: string, @Param('trackId') trackId: string, @Req() req: any) {
         const session = await this.liveSessionService.getSessionById(sessionId);
-        if (!session) {
-            throw new NotFoundException('Live session not found');
-        }
-        if (session.hostUserId !== req.userId) {
-            throw new ForbiddenException('Only the host can end this session');
+        if (!session) throw new NotFoundException('Session not found');
+
+        const isHost = session.hostUserId === req.userId;
+        const isInvited = session.invitedUsers.some(u => u.id === req.userId);
+
+        if (!isHost && session.license === 'INVITED_ONLY' && !isInvited) {
+            throw new ForbiddenException("Only host and invited users can delete tracks.");
         }
 
-        await this.liveSessionService.endLiveSession(sessionId);
-        return { message: 'Live session ended' };
+        await this.liveSessionService.deleteSessionTrack(sessionId, trackId);
+        return { message: 'Track deleted' };
     }
 }

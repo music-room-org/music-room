@@ -18,6 +18,7 @@ export class AppService {
 		newPassword?: string,
 		profileImage?: string,
 	) {
+		if (username && username.length > 15) throw new Error("Username cannot be longer than 15 characters.");
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
 		});

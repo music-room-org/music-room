@@ -274,6 +274,7 @@ export default function Library() {
                                 onChangeText={setNewPlaylistName} 
                                 placeholder={isLiveMode ? "Event Name" : "Playlist name"} 
                                 style={styles.modalInput} 
+                                maxLength={15}
                             />
 
                             {isLiveMode && (

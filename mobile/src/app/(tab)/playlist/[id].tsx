@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, Modal, TextInput, Switch, TouchableOpacity, Image, Platform, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Modal, TextInput, Switch, TouchableOpacity, Image, Platform, ScrollView, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Plus, Pencil, X } from "lucide-react-native";
+import { ChevronLeft, Plus, Pencil, X, MoreVertical } from "lucide-react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { useState, useCallback } from "react";
@@ -22,18 +22,24 @@ export default function Playlist() {
 	const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
 	const [playlistImage, setPlaylistImage] = useState("");
 	const [playlistOwner, setPlaylistOwner] = useState("");
-
+	
 	const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 	const [editName, setEditName] = useState("");
 	const [editImage, setEditImage] = useState("");
 	const [editIsPublic, setEditIsPublic] = useState(true);
+	
 	const [isCollaborative, setIsCollaborative] = useState(false);
-
 	const [friendsList, setFriendsList] = useState<any[]>([]);
 	const [friendSearchQuery, setFriendSearchQuery] = useState("");
 	const [newCollaborators, setNewCollaborators] = useState<{id: string, username: string}[]>([]);
 	const [existingCollaborators, setExistingCollaborators] = useState<any[]>([]);
 	const [myUsername, setMyUsername] = useState("");
+
+	// États pour le menu compact et la suppression
+	const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+	const [menuPosition, setMenuPosition] = useState({ top: 0, right: 40 });
+	const [isMenuVisible, setIsMenuVisible] = useState(false);
+	const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
@@ -61,14 +67,13 @@ export default function Playlist() {
 					});
 
 					const data = await response.json();
-					
 					setPlaylistName(data.name);
 					setPlaylistImage(data.imageUrl);
 					setPlaylistOwner(data.owner?.username || "");
 					setIsCollaborative(data.collaborators && data.collaborators.length > 0);
 					setExistingCollaborators(data.collaborators || []);
 					setEditIsPublic(data.isPublic);
-
+					
 					if (data.tracks) {
 						setPlaylistTracks(data.tracks);
 					}
@@ -103,13 +108,29 @@ export default function Playlist() {
 						});
 					}
 				}
-
 				setIsEditModalVisible(false);
 				setNewCollaborators([]);
 				setFriendSearchQuery("");
 			}
 		} catch (error) {
 			console.error(error);
+		}
+	};
+
+	const confirmDeleteTrack = async () => {
+		if (!selectedTrackId) return;
+		
+		try {
+			const token = await getToken();
+			await fetch(`${apiUrl}/playlists/${id}/tracks/${selectedTrackId}`, {
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			setPlaylistTracks(prev => prev.filter(t => t.id !== selectedTrackId));
+			setIsDeleteModalVisible(false);
+			setSelectedTrackId(null);
+		} catch (err) {
+			console.error("Delete track error:", err);
 		}
 	};
 
@@ -120,10 +141,17 @@ export default function Playlist() {
 			allowsEditing: true,
 			aspect: [1, 1],
 		});
-
 		if (!result.canceled) {
 			setEditImage(result.assets[0].uri);
 		}
+	};
+
+	const openMenuForTrack = (trackId: string, event: any) => {
+		event.target.measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
+			setMenuPosition({ top: py + height, right: 30 });
+			setSelectedTrackId(trackId);
+			setIsMenuVisible(true);
+		});
 	};
 
 	const filteredFriends = friendSearchQuery.trim() === "" 
@@ -133,7 +161,6 @@ export default function Playlist() {
 			return friendUser?.username?.toLowerCase().includes(friendSearchQuery.toLowerCase());
 		});
 
-	// PERMISSIONS STRICTES :
 	const isOwner = playlistOwner === myUsername;
 	const canAddTitles = editIsPublic || isOwner || isCollaborative;
 
@@ -148,7 +175,10 @@ export default function Playlist() {
 					</View>
 
 					<View style={styles.playlistInfo}>
-						<Image source={{ uri: playlistImage || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png" }} style={styles.cover} />
+						<Image 
+							source={{ uri: playlistImage || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png" }} 
+							style={styles.cover} 
+						/>
 						<View style={styles.playlistDetails}>
 							<Text style={styles.playlistTitle}>{playlistName}</Text>
 							<Text style={styles.playlistAuthor}>{isCollaborative ? "Collaborative playlist by" : "Playlist by"} {playlistOwner}</Text>
@@ -156,7 +186,6 @@ export default function Playlist() {
 					</View>
 
 					<View style={styles.buttonsContainer}>
-						{/* Seul le propriétaire peut éditer la playlist */}
 						{isOwner && (
 							<TouchableOpacity style={styles.infoButton} onPress={() => {
 								setEditName(playlistName);
@@ -168,9 +197,9 @@ export default function Playlist() {
 							</TouchableOpacity>
 						)}
 
-						{/* On peut ajouter des titres si c'est public, ou si on est owner/collab */}
 						{canAddTitles && playlistTracks.length > 0 && (
-							<TouchableOpacity style={styles.infoButton} onPress={() => { router.push(`/playlist/search?id=${id}`)}}>
+							<TouchableOpacity style={styles.infoButton} onPress={() => {
+								router.push(`/playlist/search?id=${id}`)}}>
 								<Plus size={18} color="#E7A500"/>
 								<Text style={styles.infoButtonText}> Add titles </Text>
 							</TouchableOpacity>
@@ -180,16 +209,31 @@ export default function Playlist() {
 					<View style={styles.divider} />
 
 					{playlistTracks.map((track, index) => (
-						<TouchableOpacity key={track.id} style={styles.trackItem} onPress={() => playQueue(playlistTracks, index)}>
-							<Image source={{ uri: track.thumbnail }} style={styles.trackImage} />
-							<View style={styles.trackInfo}>
-								<Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
-								<Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
-								<Text style={{ fontSize: 11, color: "#8A8A8A" }} numberOfLines={1}>
-									{isCollaborative && track.addedBy?.username ? `added by ${track.addedBy.username}` : ""}
-								</Text>
-							</View>
-						</TouchableOpacity>
+						<View key={track.id} style={styles.trackItemContainer}>
+							<TouchableOpacity style={styles.trackItem} onPress={() => playQueue(playlistTracks, index)}>
+								<Image source={{ uri: track.thumbnail }} style={styles.trackImage} />
+								<View style={styles.trackInfo}>
+									<Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
+									<Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
+									<Text style={{ fontSize: 11, color: "#8A8A8A" }} numberOfLines={1}>
+										{isCollaborative && track.addedBy?.username ? `added by ${track.addedBy.username}` : ""}
+									</Text>
+								</View>
+							</TouchableOpacity>
+							
+							{canAddTitles && (
+								<TouchableOpacity 
+									ref={(ref) => { track._ref = ref; }}
+									onPress={(e) => {
+										setSelectedTrackId(track.id);
+										setIsMenuVisible(true);
+									}}
+									style={styles.moreOptionsBtn}
+								>
+									<MoreVertical size={20} color={COLORS.textMuted} />
+								</TouchableOpacity>
+							)}
+						</View>
 					))}
 
 					{playlistTracks.length === 0 && (
@@ -203,10 +247,46 @@ export default function Playlist() {
 							<Text style={styles.addTitlesText}> Add new titles </Text>
 						</TouchableOpacity>
 					)}
-
 				</ScrollView>
 			</View>
 
+			{/* Vrai menu contextuel compact (flottant) */}
+			<Modal visible={isMenuVisible} animationType="fade" transparent onRequestClose={() => setIsMenuVisible(false)}>
+				<TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
+					<View style={styles.compactMenu}>
+						<TouchableOpacity 
+							style={styles.menuItem} 
+							onPress={() => {
+								setIsMenuVisible(false);
+								setIsDeleteModalVisible(true);
+							}}
+						>
+							<Text style={styles.menuItemText}>Retirer de la playlist</Text>
+						</TouchableOpacity>
+					</View>
+				</TouchableOpacity>
+			</Modal>
+
+			{/* Petite modale sobre pour confirmer la suppression */}
+			<Modal visible={isDeleteModalVisible} animationType="fade" transparent onRequestClose={() => setIsDeleteModalVisible(false)}>
+				<View style={styles.modalOverlay}>
+					<View style={styles.compactModalContent}>
+						<Text style={styles.modalTitle}>Retirer le titre</Text>
+						<Text style={styles.modalText}>Voulez-vous vraiment retirer ce titre de la playlist ?</Text>
+						
+						<View style={styles.modalButtons}>
+							<TouchableOpacity style={styles.cancelButton} onPress={() => setIsDeleteModalVisible(false)}>
+								<Text style={styles.cancelButtonText}>Annuler</Text>
+							</TouchableOpacity>
+							<TouchableOpacity style={styles.deleteButton} onPress={confirmDeleteTrack}>
+								<Text style={styles.saveButtonText}>Supprimer</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+			</Modal>
+
+			{/* Modale d'édition de la playlist */}
 			<Modal visible={isEditModalVisible} animationType="fade" transparent onRequestClose={() => setIsEditModalVisible(false)}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContent}>
@@ -219,7 +299,6 @@ export default function Playlist() {
 									<Pencil size={20} color="#FFFFFF" />
 								</View>
 							</TouchableOpacity>
-
 							<View style={styles.editInfos}>
 								<TextInput
 									value={editName}
@@ -227,6 +306,7 @@ export default function Playlist() {
 									placeholder="Playlist name"
 									placeholderTextColor={COLORS.textMuted}
 									style={styles.playlistNameInput}
+									maxLength={15}
 								/>
 								<View style={styles.publicRow}>
 									<Text style={styles.publicText}> Public playlist </Text>
@@ -236,15 +316,15 @@ export default function Playlist() {
 						</View>
 
 						{isCollaborative && (
-							<View style={{ marginTop: 10, marginBottom: 10 }}>
-								<Text style={{ fontFamily: FONTS.medium, fontSize: 14, color: COLORS.textPrimary, marginBottom: 12 }}>
+							<View style={styles.friendsSection}>
+								<Text style={styles.friendsSectionTitle}>
 									Add new collaborators
 								</Text>
 
-								<View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+								<View style={styles.friendsContainer}>
 									{newCollaborators.map((friend) => (
-										<View key={friend.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}>
-											<Text style={{ color: 'white', marginRight: 6, fontFamily: FONTS.medium }}>{friend.username}</Text>
+										<View key={friend.id} style={styles.friendBadge}>
+											<Text style={styles.friendBadgeText}>{friend.username}</Text>
 											<TouchableOpacity onPress={() => setNewCollaborators(prev => prev.filter(f => f.id !== friend.id))}>
 												<X size={14} color="white" />
 											</TouchableOpacity>
@@ -274,9 +354,9 @@ export default function Playlist() {
 												setNewCollaborators(prev => [...prev, { id: friendUser.id, username: friendUser.username }]);
 												setFriendSearchQuery(""); 
 											}} 
-											style={{ paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, marginBottom: 6, backgroundColor: "#f5f5f5", marginTop: 8 }}
+											style={styles.friendSelectBtn}
 										>
-											<Text style={{ fontFamily: FONTS.regular, color: COLORS.textPrimary }}>{friendUser.username}</Text>
+											<Text style={styles.friendSelectBtnText}>{friendUser.username}</Text>
 										</TouchableOpacity>
 									);
 								})}
@@ -401,11 +481,16 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: "#E7A500",
 	},
+	trackItemContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 10,
+	},
 	trackItem: {
+		flex: 1,
 		flexDirection: "row",
 		alignItems: "center",
 		minHeight: 56,
-		marginBottom: 10,
 	},
 	trackImage: {
 		width: 56,
@@ -428,22 +513,73 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		color: COLORS.textPrimary,
 	},
+	moreOptionsBtn: {
+		padding: 12,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	menuBackdrop: {
+		flex: 1,
+		backgroundColor: "transparent",
+	},
+	compactMenu: {
+		position: "absolute",
+		right: 24,
+		top: 250, // Ajusté dynamiquement ou fixe selon les besoins
+		backgroundColor: "#FFFFFF",
+		borderRadius: 8,
+		paddingVertical: 4,
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.15,
+		shadowRadius: 6,
+		elevation: 4,
+		borderWidth: 1,
+		borderColor: "#EAEAEA",
+		minWidth: 180,
+	},
+	menuItem: {
+		paddingVertical: 12,
+		paddingHorizontal: 16,
+	},
+	menuItemText: {
+		fontFamily: FONTS.medium,
+		fontSize: 14,
+		color: "#FF3B30",
+	},
 	modalOverlay: {
 		flex: 1,
 		justifyContent: "center",
+		alignItems: "center",
 		backgroundColor: "rgba(0,0,0,0.4)",
 		padding: 24,
+	},
+	compactModalContent: {
+		backgroundColor: COLORS.background,
+		borderRadius: 16,
+		padding: 20,
+		width: "100%",
+		maxWidth: 320,
 	},
 	modalContent: {
 		backgroundColor: COLORS.background,
 		borderRadius: 20,
 		padding: 20,
+		width: "100%",
+		maxHeight: "85%",
 	},
 	modalTitle: {
 		fontFamily: FONTS.semiBold,
-		fontSize: 18,
+		fontSize: 17,
 		color: COLORS.textPrimary,
+		marginBottom: 8,
+	},
+	modalText: {
+		fontFamily: FONTS.regular,
+		fontSize: 14,
+		color: COLORS.textDescription,
 		marginBottom: 20,
+		lineHeight: 20,
 	},
 	modalInput: {
 		height: 48,
@@ -456,30 +592,39 @@ const styles = StyleSheet.create({
 	modalButtons: {
 		flexDirection: "row",
 		gap: 10,
-		marginTop: 24,
 	},
 	cancelButton: {
 		flex: 1,
-		height: 48,
-		borderRadius: 24,
+		height: 40,
+		borderRadius: 20,
 		justifyContent: "center",
 		alignItems: "center",
 		backgroundColor: "#EAEAEA",
 	},
 	saveButton: {
 		flex: 1,
-		height: 48,
-		borderRadius: 24,
+		height: 40,
+		borderRadius: 20,
 		justifyContent: "center",
 		alignItems: "center",
 		backgroundColor: COLORS.primary,
 	},
+	deleteButton: {
+		flex: 1,
+		height: 40,
+		borderRadius: 20,
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "red",
+	},
 	cancelButtonText: {
 		fontFamily: FONTS.semiBold,
+		fontSize: 13,
 		color: COLORS.textPrimary,
 	},
 	saveButtonText: {
 		fontFamily: FONTS.semiBold,
+		fontSize: 13,
 		color: COLORS.white,
 	},
 	editHeader: {
@@ -528,6 +673,47 @@ const styles = StyleSheet.create({
 	publicText: {
 		fontFamily: FONTS.medium,
 		fontSize: 14,
+		color: COLORS.textPrimary,
+	},
+	friendsSection: {
+		marginTop: 10,
+		marginBottom: 10,
+	},
+	friendsSectionTitle: {
+		fontFamily: FONTS.medium,
+		fontSize: 14,
+		color: COLORS.textPrimary,
+		marginBottom: 12,
+	},
+	friendsContainer: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
+		marginBottom: 12,
+	},
+	friendBadge: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: COLORS.primary,
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		borderRadius: 16,
+	},
+	friendBadgeText: {
+		color: 'white',
+		marginRight: 6,
+		fontFamily: FONTS.medium,
+	},
+	friendSelectBtn: {
+		paddingVertical: 10,
+		paddingHorizontal: 12,
+		borderRadius: 8,
+		marginBottom: 6,
+		backgroundColor: "#f5f5f5",
+		marginTop: 8,
+	},
+	friendSelectBtnText: {
+		fontFamily: FONTS.regular,
 		color: COLORS.textPrimary,
 	},
 });

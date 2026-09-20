@@ -227,6 +227,7 @@ export function AuthScreen() {
 										value={username}
 										onChangeText={setUsername}
 										autoCapitalize="none"
+										maxLength={15}
 										leftIcon={<User size={22} color={COLORS.inputIcon} />}
 									/>
 								)}

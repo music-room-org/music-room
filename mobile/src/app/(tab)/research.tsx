@@ -1,49 +1,62 @@
-import { View, ScrollView, Text, ActivityIndicator, StyleSheet, Platform } from "react-native";
+import { View, ScrollView, Text, ActivityIndicator, StyleSheet, Platform, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { COLORS, FONTS, API_BASE_URL } from "@/constants";
-import { SearchBar, PrimaryButton, ArtistListItem, ArtistItem, CategoryTabs, TrackListItem, PlaylistItem } from "@/components";
+import { SearchBar, ArtistListItem, ArtistItem, CategoryTabs, TrackListItem, LibraryPlaylistItem } from "@/components";
 import { usePlayer, Track } from "@/context/PlayerContext";
+import { useRouter } from "expo-router";
 
 async function getToken() {
 	if (Platform.OS === "web") {
 		return localStorage.getItem("userToken");
 	}
-
 	return await SecureStore.getItemAsync("userToken");
 }
 
 export default function Research() {
-	const [activeTab, setActiveTab] = useState('Titles');
+	const router = useRouter();
+	const { playTrack, currentTrack, isPlaying } = usePlayer();
+
+	const [activeTab, setActiveTab] = useState('Artists');
 	const [searchQuery, setSearchQuery] = useState('');
+	const [isSearching, setIsSearching] = useState(false);
+
 	const [trackResults, setTrackResults] = useState<Track[]>([]);
 	const [artistResults, setArtistResults] = useState<ArtistItem[]>([]);
-	const [isSearching, setIsSearching] = useState(false);
-	const { playTrack, currentTrack, isPlaying } = usePlayer();
+	const [playlistResults, setPlaylistResults] = useState<any[]>([]);
 
 	const handleSearch = async (query: string, tab = activeTab) => {
 		setSearchQuery(query);
+		
 		if (!query.trim()) {
 			setTrackResults([]);
 			setArtistResults([]);
+			setPlaylistResults([]);
 			return;
 		}
 
 		try {
 			setIsSearching(true);
+			
 			if (tab === 'Artists') {
 				const res = await fetch(`${API_BASE_URL}/player/artists?q=${encodeURIComponent(query)}`);
-				if (res.ok) {
-					const data = await res.json();
-					setArtistResults(data);
-				}
-			} else {
+				if (res.ok) setArtistResults(await res.json());
+				setTrackResults([]);
+				setPlaylistResults([]);
+			} else if (tab === 'Titles') {
 				const res = await fetch(`${API_BASE_URL}/player/search?q=${encodeURIComponent(query)}`);
-				if (res.ok) {
-					const data = await res.json();
-					setTrackResults(data);
-				}
+				if (res.ok) setTrackResults(await res.json());
+				setArtistResults([]);
+				setPlaylistResults([]);
+			} else if (tab === 'Playlists') {
+				const token = await getToken();
+				const res = await fetch(`${API_BASE_URL}/playlists/search?q=${encodeURIComponent(query)}`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (res.ok) setPlaylistResults(await res.json());
+				setArtistResults([]);
+				setTrackResults([]);
 			}
 		} catch (err) {
 			console.error('Search error:', err);
@@ -64,25 +77,26 @@ export default function Research() {
 		handleSearch(artist.name, 'Titles');
 	};
 
-	const hasResults = activeTab === 'Artists' ? artistResults.length > 0 : trackResults.length > 0;
-
+	const isSearchEmpty = searchQuery.trim().length === 0;
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
-			<ScrollView
-				style={styles.scrollView}
-				contentContainerStyle={styles.scrollContent}
-				showsVerticalScrollIndicator={false}
+			<ScrollView 
+				style={styles.scrollView} 
+				contentContainerStyle={styles.scrollContent} 
+				showsVerticalScrollIndicator={false} 
 				keyboardShouldPersistTaps="handled"
 			>
-				<SearchBar
-					value={searchQuery}
-					onChangeText={(text) => handleSearch(text)}
-					onSubmitEditing={() => handleSearch(searchQuery)}
+				<SearchBar 
+					value={searchQuery} 
+					onChangeText={(text) => handleSearch(text)} 
+					onSubmitEditing={() => handleSearch(searchQuery)} 
 				/>
-				<CategoryTabs
-					activeTab={activeTab}
-					onTabChange={handleTabChange}
+
+				<CategoryTabs 
+					activeTab={activeTab} 
+					onTabChange={handleTabChange} 
+					tabs={['Artists', 'Titles', 'Playlists']}
 				/>
 
 				{isSearching && (
@@ -91,87 +105,75 @@ export default function Research() {
 					</View>
 				)}
 
-				{!isSearching && activeTab === 'Artists' && artistResults.length > 0 && (
+				{/* État vide : Tant qu'on n'a rien écrit */}
+				{!isSearching && isSearchEmpty && (
+					<View style={styles.emptyStateContainer}>
+						<Text style={styles.emptyText}>Start typing to search...</Text>
+					</View>
+				)}
+
+				{/* ONGLET ARTISTS */}
+				{!isSearching && !isSearchEmpty && activeTab === 'Artists' && (
 					<View style={styles.sectionContainer}>
-						<Text style={styles.sectionTitle}>Artists (Topic Channels)</Text>
+						<Text style={styles.sectionTitle}>Artists</Text>
 						{artistResults.map((artist) => (
-							<ArtistListItem
-								key={artist.id}
-								artist={artist}
-								onPress={() => handleArtistPress(artist)}
+							<ArtistListItem 
+								key={artist.id} 
+								artist={artist} 
+								onPress={() => handleArtistPress(artist)} 
 							/>
 						))}
+						{artistResults.length === 0 && (
+							<View style={styles.emptyStateContainer}>
+								<Text style={styles.emptyText}>No artists found.</Text>
+							</View>
+						)}
 					</View>
 				)}
 
-				{!isSearching && activeTab !== 'Artists' && trackResults.length > 0 && (
+				{/* ONGLET TITLES */}
+				{!isSearching && !isSearchEmpty && activeTab === 'Titles' && (
 					<View style={styles.sectionContainer}>
-						<Text style={styles.sectionTitle}>Search Results</Text>
+						<Text style={styles.sectionTitle}>Titles</Text>
 						{trackResults.map((track) => (
-							<TrackListItem
-								key={track.id}
-								title={track.title}
-								subtitle={track.artist}
-								imageUrl={track.thumbnail}
-								isPlaying={currentTrack?.id === track.id && isPlaying}
-								onPress={() => playTrack(track)}
+							<TrackListItem 
+								key={track.id} 
+								title={track.title} 
+								subtitle={track.artist} 
+								imageUrl={track.thumbnail} 
+								isPlaying={currentTrack?.id === track.id && isPlaying} 
+								onPress={() => playTrack(track)} 
 							/>
 						))}
+						{trackResults.length === 0 && (
+							<View style={styles.emptyStateContainer}>
+								<Text style={styles.emptyText}>No titles found.</Text>
+							</View>
+						)}
 					</View>
 				)}
 
-				{!isSearching && !hasResults && (
-					<>
-						<View style={styles.sectionContainer}>
-							<Text style={styles.sectionTitle}>Trending now</Text>
-
-							<TrackListItem
-								title="Psycho shit"
-								subtitle="The Strokes"
-								imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-							/>
-							<TrackListItem
-								title="NUEVAYoL"
-								subtitle="Bad Bunny"
-								imageUrl="https://media.pitchfork.com/photos/682b43f9d6a2575d172e91a4/1:1/w_320,c_limit/Bad-Bunny-Debi-Tirar-Mas-Fotos.jpeg"
-							/>
-							<TrackListItem
-								title="Man I need"
-								subtitle="Olivia Dean"
-								imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
-							/>
-							<TrackListItem
-								title="Dai dai"
-								subtitle="Shakira"
-								imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
-							/>
-						</View>
-
-						<View style={styles.sectionContainer}>
-							<Text style={styles.sectionTitle}>Popular playlist</Text>
-							<PlaylistItem
-								title="Psycho shit"
-								listenersText="3423 monthly listeners"
-								imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg"
-							/>
-							<PlaylistItem
-								title="NUEVAYoL"
-								listenersText="Bad Bunny"
-								imageUrl="https://media.pitchfork.com/photos/682b43f9d6a2575d172e91a4/1:1/w_320,c_limit/Bad-Bunny-Debi-Tirar-Mas-Fotos.jpeg"
-							/>
-							<PlaylistItem
-								title="Man I need"
-								listenersText="Olivia Dean"
-								imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
-							/>
-							<PlaylistItem
-								title="Dai dai"
-								listenersText="Shakira"
-								imageUrl="https://static.fnac-static.com/multimedia/Images/FR/NR/98/38/22/19019928/1540-1/tsp20250603153148/The-Art-Of-Loving.jpg"
-							/>
-						</View>
-					</>
+				{/* ONGLET PLAYLISTS */}
+				{!isSearching && !isSearchEmpty && activeTab === 'Playlists' && (
+					<View style={styles.sectionContainer}>
+						<Text style={styles.sectionTitle}>Playlists</Text>
+						{playlistResults.map((playlist) => (
+							<TouchableOpacity key={playlist.id} onPress={() => router.push(`/playlist/${playlist.id}`)}>
+								<LibraryPlaylistItem 
+									title={playlist.name} 
+									author={`By ${playlist.owner?.username || 'Unknown'}`} 
+									imageUrl={playlist.imageUrl || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png"} 
+								/>
+							</TouchableOpacity>
+						))}
+						{playlistResults.length === 0 && (
+							<View style={styles.emptyStateContainer}>
+								<Text style={styles.emptyText}>No playlists found.</Text>
+							</View>
+						)}
+					</View>
 				)}
+
 			</ScrollView>
 		</SafeAreaView>
 	);
@@ -180,7 +182,7 @@ export default function Research() {
 const styles = StyleSheet.create({
 	safeArea: {
 		flex: 1,
-		backgroundColor: COLORS.background
+		backgroundColor: COLORS.background,
 	},
 	scrollView: {
 		flex: 1,
@@ -195,24 +197,23 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	sectionContainer: {
-		marginTop: 24
-	},
-	userCard: {
-		backgroundColor: COLORS.white,
-		borderRadius: 16,
-		padding: 16,
-		marginBottom: 16
-	},
-	username: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 18,
-		color: COLORS.textPrimary,
-		marginBottom: 12
+		marginTop: 24,
 	},
 	sectionTitle: {
 		fontFamily: FONTS.semiBold,
 		fontSize: 22,
 		color: COLORS.textPrimary,
-		marginBottom: 16
-	}
+		marginBottom: 16,
+	},
+	emptyStateContainer: {
+		marginTop: 40,
+		alignItems: 'center',
+		paddingHorizontal: 20,
+	},
+	emptyText: {
+		fontFamily: FONTS.regular,
+		fontSize: 15,
+		color: COLORS.textMuted,
+		textAlign: 'center',
+	},
 });

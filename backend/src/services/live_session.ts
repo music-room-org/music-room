@@ -35,6 +35,7 @@ export class LiveSessionService {
         startTime?: string,
         endTime?: string
     ) {
+	    if (name && name.length > 15) throw new BadRequestException("Username cannot be longer than 15 characters.");
         // On lie le créateur ET les utilisateurs invités
         const invitees = invitedUserIds.map(id => ({ id }));
         invitees.push({ id: ownerId });
@@ -65,6 +66,7 @@ export class LiveSessionService {
         startTime?: string,
         endTime?: string
     ) {
+	    if (name && name.length > 15) throw new BadRequestException("Username cannot be longer than 15 characters.");
         const invitees = invitedUserIds.map(id => ({ id }));
         
         return await this.prisma.liveSession.update({

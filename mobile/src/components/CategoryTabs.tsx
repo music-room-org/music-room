@@ -2,27 +2,21 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { COLORS, FONTS } from "@/constants";
 
 interface CategoryTabsProps {
-	activeTab: string,
+	activeTab: string;
 	onTabChange: (tab: string) => void;
+	tabs?: string[];
 }
 
-export function CategoryTabs({ activeTab, onTabChange }: CategoryTabsProps) {
-	const tabs = ['All', 'Titles', 'Artists', 'Playlists'];
-
+export function CategoryTabs({ activeTab, onTabChange, tabs = ['Artists', 'Titles', 'Playlists'] }: CategoryTabsProps) {
 	return (
 		<View style={styles.container}>
 			{tabs.map((tab) => (
-				<TouchableOpacity
-					key={tab}
-					onPress={() => onTabChange(tab)}
+				<TouchableOpacity 
+					key={tab} 
+					onPress={() => onTabChange(tab)} 
 					style={[styles.tab, tab === activeTab && styles.activeTab]}
 				>
-					<Text
-						style={[
-							styles.tabText,
-							tab === activeTab && styles.activeTabText
-						]}
-					>
+					<Text style={[styles.tabText, tab === activeTab && styles.activeTabText]}>
 						{tab}
 					</Text>
 				</TouchableOpacity>
@@ -34,25 +28,26 @@ export function CategoryTabs({ activeTab, onTabChange }: CategoryTabsProps) {
 const styles = StyleSheet.create({
 	container: {
 		flexDirection: 'row',
-		justifyContent: 'space-between',
+		justifyContent: 'center',
+		gap: 24,
 		marginTop: 24,
-		marginBottom: 24
+		marginBottom: 24,
 	},
 	tab: {
 		paddingBottom: 8,
 		borderBottomWidth: 2,
-		borderBottomColor: 'transparent'
+		borderBottomColor: 'transparent',
 	},
 	activeTab: {
-		borderBottomColor: COLORS.primary
+		borderBottomColor: COLORS.primary,
 	},
 	tabText: {
 		fontFamily: FONTS.regular,
-		fontSize: 16,
-		color: COLORS.tabInactive
+		fontSize: 15,
+		color: COLORS.tabInactive,
 	},
 	activeTabText: {
 		fontFamily: FONTS.semiBold,
-		color: COLORS.primary
-	}
+		color: COLORS.primary,
+	},
 });

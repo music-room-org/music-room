@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 // Créer une playlist
 export async function createPlaylist(name: string, ownerId: string) {
 	if (!name) throw new Error('Le nom de la playlist est obligatoire');
+	if (name.length > 15) throw new Error("Username cannot be longer than 15 characters.");
 	const playlist = await prisma.playlist.create({
 		data: {
 			name: name,
@@ -71,7 +72,14 @@ export async function getMyPlaylists(ownerId: string) {
 // Récupérer les playlists PUBLIQUES
 export async function getPublicPlaylists() {
   return await prisma.playlist.findMany({
-	where: { isPublic: true },
+	where: { 
+		isPublic: true ,
+		owner: {
+			email: {
+				not: 'admin@music-room.com'
+			}
+		}
+	},
 	include: { owner: true },
   });
 }
@@ -113,10 +121,11 @@ export async function updatePlaylist(
   imageUrl: string,
   isPublic: boolean,
 ) {
-  return await prisma.playlist.update({
-	where: { id: playlistId },
-	data: { name, imageUrl, isPublic },
-  });
+	if (name.length > 15) throw new Error("Username cannot be longer than 15 characters.");
+	return await prisma.playlist.update({
+		where: { id: playlistId },
+		data: { name, imageUrl, isPublic },
+	});
 }
 
 export async function inviteCollaborator(
@@ -164,4 +173,24 @@ export async function getRecommendedPlaylists() {
     },
     include: { owner: true },
   });
+}
+
+export async function removeTrackFromPlaylist(playlistId: string, trackId: string) {
+    await prisma.playlistTrack.deleteMany({
+        where: { playlistId: playlistId, trackId: trackId }
+    });
+    return { message: 'Track deleted' };
+}
+
+export async function searchPublicPlaylists(query: string) {
+    return await prisma.playlist.findMany({
+        where: {
+            isPublic: true,
+            name: { contains: query, mode: 'insensitive' },
+            owner: {
+                email: { not: 'admin@music-room.com' }
+            }
+        },
+        include: { owner: true },
+    });
 }
