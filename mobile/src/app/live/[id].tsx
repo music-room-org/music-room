@@ -404,6 +404,12 @@ export default function LiveSession() {
 			<Modal visible={isEditModalVisible} animationType="fade" transparent onRequestClose={() => setIsEditModalVisible(false)}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContent}>
+						<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+							<Text style={[styles.modalTitle, { marginBottom: 0 }]}> Edit playlist </Text>
+							<TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+								<X size={24} color={COLORS.textPrimary} />
+							</TouchableOpacity>
+						</View>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<Text style={styles.modalTitle}> Event Settings </Text>
 

@@ -162,8 +162,8 @@ export default function Playlist() {
 		});
 
 	const isOwner = playlistOwner === myUsername;
-	const canAddTitles = editIsPublic || isOwner || isCollaborative;
-
+	const isMusicRoomPlaylist = playlistOwner === "Music-Room";
+	const canAddTitles = isMusicRoomPlaylist ? false : (editIsPublic || isOwner || isCollaborative);
 	return (
 		<SafeAreaView style={styles.safeArea}>
 			<View style={styles.container}>
@@ -267,10 +267,15 @@ export default function Playlist() {
 				</TouchableOpacity>
 			</Modal>
 
-			{/* Petite modale sobre pour confirmer la suppression */}
 			<Modal visible={isDeleteModalVisible} animationType="fade" transparent onRequestClose={() => setIsDeleteModalVisible(false)}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.compactModalContent}>
+						<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+							<Text style={[styles.modalTitle, { marginBottom: 0 }]}>Retirer le titre</Text>
+							<TouchableOpacity onPress={() => setIsDeleteModalVisible(false)}>
+								<X size={20} color={COLORS.textMuted} />
+							</TouchableOpacity>
+						</View>
 						<Text style={styles.modalTitle}>Retirer le titre</Text>
 						<Text style={styles.modalText}>Voulez-vous vraiment retirer ce titre de la playlist ?</Text>
 						
@@ -290,6 +295,12 @@ export default function Playlist() {
 			<Modal visible={isEditModalVisible} animationType="fade" transparent onRequestClose={() => setIsEditModalVisible(false)}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContent}>
+						<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+							<Text style={[styles.modalTitle, { marginBottom: 0 }]}> Edit playlist </Text>
+							<TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+								<X size={24} color={COLORS.textPrimary} />
+							</TouchableOpacity>
+						</View>
 						<Text style={styles.modalTitle}> Edit playlist </Text>
 
 						<View style={styles.editHeader}>

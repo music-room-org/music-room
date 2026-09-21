@@ -23,11 +23,11 @@ export class PlaylistController {
 	}
 
 	@UseGuards(Guard)
-  @Get('search')
-  async searchPlaylists(@Query('q') query: string) {
-      if (!query) return [];
-      return await searchPublicPlaylists(query);
-  }
+	@Get('search')
+	async searchPlaylists(@Query('q') query: string) {
+		if (!query) return [];
+		return await searchPublicPlaylists(query);
+	}
 
 	@Get()
 	async findAll() {
@@ -37,7 +37,7 @@ export class PlaylistController {
 	@UseGuards(Guard)
 	@Delete(':id/tracks/:trackId')
 	async removeTrack(@Param('id') playlistId: string, @Param('trackId') trackId: string, @Request() request: any) {
-			return await removeTrackFromPlaylist(playlistId, trackId);
+		return await removeTrackFromPlaylist(playlistId, trackId, request.userId);
 	}
 
 	@UseGuards(Guard)

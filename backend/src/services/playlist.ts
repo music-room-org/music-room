@@ -168,29 +168,42 @@ export async function getPendingCollaborations(userId: string) {
 
 export async function getRecommendedPlaylists() {
   return await prisma.playlist.findMany({
-    where: { 
-        owner: { email: 'admin@music-room.com' } 
-    },
-    include: { owner: true },
+	where: { 
+		owner: { email: 'admin@music-room.com' } 
+	},
+	include: { owner: true },
   });
 }
 
-export async function removeTrackFromPlaylist(playlistId: string, trackId: string) {
-    await prisma.playlistTrack.deleteMany({
-        where: { playlistId: playlistId, trackId: trackId }
-    });
-    return { message: 'Track deleted' };
+export async function removeTrackFromPlaylist(playlistId: string, trackId: string, userId: string) {
+	const playlist = await prisma.playlist.findUnique({
+		where: { id: playlistId },
+		include: { owner: true }
+	});
+
+	if (!playlist) {
+		throw new Error("Playlist introuvable.");
+	}
+
+	if (playlist.owner.username === 'Music-Room' && playlist.ownerId !== userId) {
+		throw new Error("Les playlists officielles de Music-Room ne peuvent pas être modifiées.");
+	}
+
+	await prisma.playlistTrack.deleteMany({
+		where: { playlistId: playlistId, trackId: trackId }
+	});
+	return { message: 'Track deleted' };
 }
 
 export async function searchPublicPlaylists(query: string) {
-    return await prisma.playlist.findMany({
-        where: {
-            isPublic: true,
-            name: { contains: query, mode: 'insensitive' },
-            owner: {
-                email: { not: 'admin@music-room.com' }
-            }
-        },
-        include: { owner: true },
-    });
+	return await prisma.playlist.findMany({
+		where: {
+			isPublic: true,
+			name: { contains: query, mode: 'insensitive' },
+			owner: {
+				email: { not: 'admin@music-room.com' }
+			}
+		},
+		include: { owner: true },
+	});
 }
