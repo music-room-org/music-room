@@ -44,10 +44,12 @@ export default function Library() {
 	const [isPublic, setIsPublic] = useState(true);
 	const [license, setLicense] = useState('OPEN'); 
 
-    // Recherche et Coordonnées GPS
     const [addressQuery, setAddressQuery] = useState("");
     const [location, setLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
+	const [resolvedAddress, setResolvedAddress] = useState("");
+
     
+
     // Heures ET Dates
     const [startTime, setStartTime] = useState(new Date());
     const [endTime, setEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
@@ -64,6 +66,7 @@ export default function Library() {
                 const data = await response.json();
                 if (data && data.length > 0) {
                     setLocation({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
+                    setResolvedAddress(addressQuery);
                 } else {
                     alert("Cannot find address");
                 }
@@ -71,6 +74,7 @@ export default function Library() {
                 const result = await Location.geocodeAsync(addressQuery);
                 if (result.length > 0) {
                     setLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
+                    setResolvedAddress(addressQuery);
                 } else {
                     alert("Cannot find address");
                 }
@@ -113,6 +117,7 @@ export default function Library() {
 				setFriendSearchQuery("");
 				setSelectedFriends([]);
 				setAddressQuery("");
+				setResolvedAddress("");
 				setIsLiveMode(false);
 				router.push(`/live/${newLive.id}`);
 				return;
@@ -277,12 +282,12 @@ export default function Library() {
                         
                         <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
                             <List size={24} color={COLORS.textPrimary} />
-                            <Text style={styles.typeMenuText}> Playlist classique </Text>
+                            <Text style={styles.typeMenuText}>Classic playlist</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(true); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
                             <User size={24} color={COLORS.textPrimary} />
-                            <Text style={styles.typeMenuText}> Playlist collaborative </Text>
+                            <Text style={styles.typeMenuText}>Collaborative playlist</Text>
                         </TouchableOpacity>
                         
                         <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(true); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
@@ -303,6 +308,7 @@ export default function Library() {
 								setFriendSearchQuery("");
 								setSelectedFriends([]);
 								setAddressQuery("");
+								setResolvedAddress("");
 								setIsLiveMode(false);
 							}}>
 								<X size={24} color={COLORS.textMuted} />
@@ -339,13 +345,13 @@ export default function Library() {
 
 									{license === 'LOCATION_TIME' && (
 										<View style={styles.locTimeContainer}>
-											<Text style={styles.inputLabel}>Lieu de l'événement</Text>
+											<Text style={styles.inputLabel}>Place of event</Text>
 											
 											<View style={styles.addressSearchRow}>
 												<TextInput 
 													value={addressQuery}
 													onChangeText={setAddressQuery}
-													placeholder="Ville, rue, adresse..."
+													placeholder="City, street, address..."
 													placeholderTextColor={COLORS.textMuted}
 													style={styles.addressInput}
 													onSubmitEditing={geocodeAddress}
@@ -354,6 +360,12 @@ export default function Library() {
 													<Search size={20} color="white" />
 												</TouchableOpacity>
 											</View>
+
+                                            {resolvedAddress !== "" && (
+                                                <Text style={styles.resolvedAddressText}>
+                                                    📍 {resolvedAddress}
+                                                </Text>
+                                            )}
 
                                             <View style={styles.mapContainer}>
                                                 {Platform.OS === 'web' ? (
@@ -381,7 +393,7 @@ export default function Library() {
                                                 )}
                                             </View>
 
-                                            <Text style={styles.inputLabel}>Début de l'événement</Text>
+                                            <Text style={styles.inputLabel}>Beginning of the event</Text>
                                             <View style={styles.timeRow}>
                                                 <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartDatePicker(true)}>
                                                     <Text style={styles.timeBtnText}>{startTime.toLocaleDateString()}</Text>
@@ -391,7 +403,7 @@ export default function Library() {
                                                 </TouchableOpacity>
                                             </View>
 
-                                            <Text style={styles.inputLabel}>Fin de l'événement</Text>
+                                            <Text style={styles.inputLabel}>End of the event</Text>
                                             <View style={styles.timeRow}>
                                                 <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndDatePicker(true)}>
                                                     <Text style={styles.timeBtnText}>{endTime.toLocaleDateString()}</Text>
@@ -516,6 +528,7 @@ export default function Library() {
                                     setFriendSearchQuery("");
                                     setSelectedFriends([]);
                                     setAddressQuery("");
+                                    setResolvedAddress("");
                                     setIsLiveMode(false);
                                 }} style={styles.cancelBtn}>
                                     <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -700,6 +713,12 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		justifyContent: "center",
 		alignItems: "center",
+	},
+	resolvedAddressText: {
+		fontFamily: FONTS.medium,
+		fontSize: 13,
+		color: COLORS.textPrimary,
+		marginBottom: 12,
 	},
 	mapContainer: {
 		height: 180,

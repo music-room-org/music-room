@@ -25,8 +25,6 @@ function CustomTabBar({ state, navigation, hasNotification }: BottomTabBarProps 
 					const focused = state.index === index || (route.name === 'library' && activeRouteName.startsWith('playlist'));
 					const color = focused ? COLORS.primary : COLORS.tabInactive;
 
-					if (route.name === 'playlist') return null;
-
 					const Icon = ICONS[route.name as keyof typeof ICONS];
 					if (!Icon) return null;
 
@@ -91,7 +89,6 @@ export default function TabsLayout() {
 				if (pendingRequests.length > 0) setHasNotification(true);
 			}
 
-			// NOUVEAU : Vérification des collaborations au démarrage
 			const collabResponse = await fetch(`${apiUrl}/playlists/collaborators/pending`, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
@@ -140,7 +137,6 @@ export default function TabsLayout() {
 			<Tabs.Screen name='research' />
 			<Tabs.Screen name='library' />
 			<Tabs.Screen name='profile' />
-			<Tabs.Screen name='playlist' options={{}} />
 		</Tabs>
 	);
 }

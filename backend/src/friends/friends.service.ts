@@ -66,6 +66,12 @@ export class FriendsService {
 		return friendship;
 	}
 
+	async removeFriend(friendshipId: string) {
+		return this.prisma.friendship.delete({
+			where: { id: friendshipId },
+		});
+	}
+
 	async getFriendsList(userId: string) {
 		return this.prisma.friendship.findMany({
 			where: { 

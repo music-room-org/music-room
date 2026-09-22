@@ -63,6 +63,7 @@ export default function LiveSession() {
 	const [editLicense, setEditLicense] = useState("OPEN");
 	
 	const [editAddressQuery, setEditAddressQuery] = useState("");
+	const [editResolvedAddress, setEditResolvedAddress] = useState("");
 	const [editLocation, setEditLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
 	const [editStartTime, setEditStartTime] = useState(new Date());
 	const [editEndTime, setEditEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
@@ -208,6 +209,7 @@ export default function LiveSession() {
 				const data = await response.json();
 				if (data && data.length > 0) {
 					setEditLocation({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
+					setEditResolvedAddress(editAddressQuery);
 				} else {
 					showError("Cannot find address");
 				}
@@ -215,6 +217,7 @@ export default function LiveSession() {
 				const result = await Location.geocodeAsync(editAddressQuery);
 				if (result.length > 0) {
 					setEditLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
+					setEditResolvedAddress(editAddressQuery);
 				} else {
 					showError("Cannot find address");
 				}
@@ -378,16 +381,16 @@ export default function LiveSession() {
 			const response = await fetch(`${apiUrl}/live_session/${id}`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ 
-					name: editName, 
-					isPublic: editIsPublic, 
+				body: JSON.stringify({
+					name: editName,
+					isPublic: editIsPublic,
 					license: editLicense,
 					latitude: editLicense === 'LOCATION_TIME' ? editLocation.latitude : null,
 					longitude: editLicense === 'LOCATION_TIME' ? editLocation.longitude : null,
 					startTime: editLicense === 'LOCATION_TIME' ? editStartTime.toISOString() : null,
 					endTime: editLicense === 'LOCATION_TIME' ? editEndTime.toISOString() : null,
 					invitedUsers: newCollaborators.map(f => f.id)
-				}),
+				})
 			});
 
 			if (response.ok) {
@@ -395,6 +398,12 @@ export default function LiveSession() {
 				setNewCollaborators([]);
 				setFriendSearchQuery("");
 				setEditAddressQuery("");
+				setEditResolvedAddress("");
+				
+				if (editLicense === 'LOCATION_TIME') {
+					setSessionLocation(editLocation);
+				}
+				
 				fetchSession();
 			} else {
 				showError("Failed to update session");
@@ -458,13 +467,42 @@ export default function LiveSession() {
 
 					<View style={styles.headerRightActions}>
 						{isOwner && (
-							<TouchableOpacity onPress={() => {
+							<TouchableOpacity onPress={async () => {
 								setEditName(sessionName);
 								setEditIsPublic(isPublic);
 								setEditLicense(license);
 								setEditLocation(sessionLocation);
 								setEditStartTime(sessionStartTime);
 								setEditEndTime(sessionEndTime);
+								setEditAddressQuery("");
+								setEditResolvedAddress("");
+
+								if (license === 'LOCATION_TIME' && sessionLocation.latitude && sessionLocation.longitude) {
+									try {
+										if (Platform.OS === 'web') {
+											const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${sessionLocation.latitude}&lon=${sessionLocation.longitude}`);
+											const data = await response.json();
+											if (data && data.display_name) {
+												setEditAddressQuery(data.display_name);
+												setEditResolvedAddress(data.display_name);
+											}
+										} else {
+											const result = await Location.reverseGeocodeAsync({
+												latitude: sessionLocation.latitude,
+												longitude: sessionLocation.longitude
+											});
+											if (result && result.length > 0) {
+												const loc = result[0];
+												const addressStr = [loc.name, loc.streetNumber, loc.street, loc.city].filter(Boolean).join(", ");
+												setEditAddressQuery(addressStr);
+												setEditResolvedAddress(addressStr);
+											}
+										}
+									} catch (error) {
+										console.error("Erreur lors de la récupération de l'adresse :", error);
+									}
+								}
+
 								setIsEditModalVisible(true);
 							}} style={styles.iconButton}>
 								<Pencil size={20} color={COLORS.primary} />
@@ -663,6 +701,12 @@ export default function LiveSession() {
 										</TouchableOpacity>
 									</View>
 
+									{editResolvedAddress !== "" && (
+										<Text style={styles.resolvedAddressText}>
+											📍 {editResolvedAddress}
+										</Text>
+									)}
+
 									<View style={styles.mapContainer}>
 										{Platform.OS === 'web' ? (
 											<iframe
@@ -827,6 +871,7 @@ export default function LiveSession() {
 									setNewCollaborators([]);
 									setFriendSearchQuery("");
 									setEditAddressQuery("");
+									setEditResolvedAddress("");
 								}}>
 									<Text style={styles.cancelButtonText}> Cancel </Text>
 								</TouchableOpacity>
@@ -1113,6 +1158,12 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		justifyContent: "center",
 		alignItems: "center",
+	},
+	resolvedAddressText: {
+		fontFamily: FONTS.medium,
+		fontSize: 13,
+		color: COLORS.textPrimary,
+		marginBottom: 12,
 	},
 	mapContainer: {
 		height: 180,

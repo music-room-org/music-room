@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Patch, Query, Request, UseGuards, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Delete, Patch, Query, Request, UseGuards, Param } from '@nestjs/common';
 import { Guard } from 'src/security/guard';
 import { FriendsService } from './friends.service';
 import { FriendshipStatus } from '@prisma/client';
@@ -42,5 +42,10 @@ export class FriendsController {
     @Get('profile/:id')
     getFriendProfilePreview(@Param('id') id: string) {
         return this.friendsService.getFriendProfilePreview(id);
+    }
+
+    @Delete(':friendshipId')
+    removeFriend(@Param('friendshipId') friendshipId: string) {
+        return this.friendsService.removeFriend(friendshipId);
     }
 }

@@ -85,7 +85,7 @@ export default function PlaylistSearch() {
 				<View style={styles.header}>
 
 					<TouchableOpacity
-						onPress={() => router.push("/library")}
+						onPress={() => router.push(`/playlist/${id}`)}
 						style={styles.backButton}
 					>
 						<ChevronLeft
