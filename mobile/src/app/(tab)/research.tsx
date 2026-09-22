@@ -1,9 +1,18 @@
-import { View, ScrollView, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ScrollView, Text, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
 import { COLORS, FONTS, API_BASE_URL } from "@/constants";
-import { SearchBar, CategoryTabs, TrackListItem, PlaylistItem, ArtistListItem, ArtistItem } from "@/components";
+import { SearchBar, PrimaryButton, ArtistListItem, ArtistItem, CategoryTabs, TrackListItem, PlaylistItem } from "@/components";
 import { usePlayer, Track } from "@/context/PlayerContext";
+
+async function getToken() {
+	if (Platform.OS === "web") {
+		return localStorage.getItem("userToken");
+	}
+
+	return await SecureStore.getItemAsync("userToken");
+}
 
 export default function Research() {
 	const [activeTab, setActiveTab] = useState('Titles');
@@ -56,6 +65,62 @@ export default function Research() {
 	};
 
 	const hasResults = activeTab === 'Artists' ? artistResults.length > 0 : trackResults.length > 0;
+	const [searchResults, setSearchResults] = useState<any[]>([]);
+	const [pendingRequests, setPendingRequests] = useState<string[]>([]);
+
+	const sendRequest = async (targetId: string) => {
+		const token = await getToken();
+
+		if (!token) return;
+
+		const apiUrl =
+			Platform.OS === "android"
+				? "http://10.0.2.2:3000"
+				: "http://localhost:3000";
+
+		const response = await fetch(`${apiUrl}/friends/request`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({
+				receiverId: targetId,
+			}),
+		});
+
+		const data = await response.json();
+		setPendingRequests((prev) => [...prev, targetId]);
+		console.log(data);
+	};
+
+	useEffect(() => {
+		const searchUsers = async () => {
+			if (!searchQuery.trim()) {
+				setSearchResults([]);
+				return;
+			}
+
+			const token = await getToken();
+			if (!token) return;
+
+			const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+
+			const response = await fetch(
+				`${apiUrl}/friends/search?q=${encodeURIComponent(searchQuery)}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			const data = await response.json();
+			setSearchResults(data);
+		};
+
+		searchUsers();
+	}, [searchQuery]);
 
 	return (
 		<SafeAreaView style={styles.safeArea}>
@@ -185,7 +250,19 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	sectionContainer: {
-		marginTop: 32
+		marginTop: 24
+	},
+	userCard: {
+		backgroundColor: COLORS.white,
+		borderRadius: 16,
+		padding: 16,
+		marginBottom: 16
+	},
+	username: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 18,
+		color: COLORS.textPrimary,
+		marginBottom: 12
 	},
 	sectionTitle: {
 		fontFamily: FONTS.semiBold,
