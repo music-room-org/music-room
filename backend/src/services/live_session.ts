@@ -247,7 +247,6 @@ export class LiveSessionService {
         if (session.license === 'LOCATION_TIME') {
             const now = new Date();
             
-            // 1. Le temps s'applique à tout le monde, même l'hôte
             if (session.startTime && now < session.startTime) {
                 throw new ForbiddenException("Event has not started yet.");
             }
