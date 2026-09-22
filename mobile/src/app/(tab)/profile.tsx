@@ -192,7 +192,6 @@ export default function Profile() {
 
 					<View style={styles.statsRow}>
 						<ProfileStat value="46" label="playlists" />
-						<ProfileStat value="348" label="liked titles" />
 						<ProfileStat value={friendsList.length.toString()} label="friends" />
 					</View>
 
@@ -200,19 +199,6 @@ export default function Profile() {
 						<ProfileActionButton title="Modify my profile" isPrimary={true} icon={<Pencil color={COLORS.primary} />} onPress={() => router.push("/edit-profile")} />
 						<ProfileActionButton title="Add a friend" isPrimary={false} icon={<UserPlus color="black" />} onPress={() => setIsAddFriendModalVisible(true)} />
 						<ProfileActionButton title="Log out" isPrimary={false} icon={<LogOut color='black' />} onPress={() => handleLogout()} />
-					</View>
-
-					<View style={styles.divider}></View>
-
-					<View style={styles.sectionHeader}>
-						<Text style={styles.sectionTitle}>Recent activity</Text>
-						<ChevronRight color={COLORS.textPrimary} />
-					</View>
-
-					<View style={styles.activityContainer}>
-						<ActivityItem title="Roadtrip" description="blablabla" time="August 2026" imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg" />
-						<ActivityItem title="Tanti auguri" description="blablabla" time="August 2026" imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg" />
-						<ActivityItem title="Roadtrip" description="blablabla" time="August 2026" imageUrl="https://m.media-amazon.com/images/I/91nZ-EThngL._SL1500_.jpg" />
 					</View>
 
 					<View style={styles.divider}></View>
@@ -233,99 +219,227 @@ export default function Profile() {
 				</ScrollView>
 			</ScrollView>
 
-			<Modal visible={isModalVisible} animationType="slide" transparent={true}>
+			<Modal visible={isModalVisible} animationType="fade" transparent={true}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContainer}>
-						<TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.closeModalBtn}>
-							<X size={24} color="black"/>
-						</TouchableOpacity>
 
-						{friendRequests.length > 0 && (
-							<>
-								<View style={styles.sectionHeaderModal}>
-									<Text style={styles.sectionTitle}> Friends request </Text>
-								</View>
-								<View style={styles.activityContainerModal}>
+						<View style={styles.modalHeader}>
+							<Text style={styles.modalTitle}>Requests</Text>
+
+							<TouchableOpacity
+								onPress={() => setIsModalVisible(false)}
+								style={styles.closeModalBtn}
+							>
+								<X size={24} color={COLORS.textPrimary} />
+							</TouchableOpacity>
+						</View>
+
+						<ScrollView
+							showsVerticalScrollIndicator={false}
+							contentContainerStyle={styles.modalContent}
+						>
+							{friendRequests.length > 0 && (
+								<View style={styles.modalSection}>
+									<Text style={styles.modalSectionTitle}>
+										Friend requests
+									</Text>
+
 									{friendRequests.map((request: any) => (
-										<View key={request.id}>
-											<ActivityItem title={request.sender?.username} description="Friend request" time="" imageUrl={request.sender?.profileImage} />
-											<View style={styles.requestActions}>
-												<TouchableOpacity onPress={() => handleRequest(request.id, "ACCEPTED")}>
-													<Check size={24} color="green"/>
-												</TouchableOpacity>
-												<TouchableOpacity onPress={() => handleRequest(request.id, "REJECTED")}>
-													<X size={24} color="red"/>
-												</TouchableOpacity>
-											</View>
-										</View>
-									))}
-								</View>
-								<View style={styles.dividerModal}></View>
-							</>
-						)}
+										<View key={request.id} style={styles.requestRow}>
+											<View style={styles.requestUser}>
+												{request.sender?.profileImage ? (
+													<Image
+														source={{ uri: request.sender.profileImage }}
+														style={styles.requestAvatar}
+													/>
+												) : (
+													<View style={styles.requestAvatar} />
+												)}
 
-						{collabRequests.length > 0 && (
-							<>
-								<View style={styles.sectionHeaderModal}>
-									<Text style={styles.sectionTitle}>Collaboration requests</Text>
-								</View>
-								<View style={styles.activityContainerModal}>
-									{collabRequests.map((req: any) => (
-										<View key={req.id}>
-											<ActivityItem 
-												title={req.playlist?.name} 
-												description={`Invited by ${req.playlist?.owner?.username}`} 
-												time="" 
-												imageUrl={req.playlist?.imageUrl || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png"} 
-											/>
+												<View style={styles.requestInfo}>
+													<Text style={styles.requestUsername}>
+														{request.sender?.username}
+													</Text>
+
+													<Text style={styles.requestDescription}>
+														Friend request
+													</Text>
+												</View>
+											</View>
+
 											<View style={styles.requestActions}>
-												<TouchableOpacity onPress={() => handleCollabRequest(req.id, "ACCEPTED")}>
-													<Check size={24} color="green" />
+												<TouchableOpacity
+													onPress={() =>
+														handleRequest(request.id, "ACCEPTED")
+													}
+													style={styles.acceptButton}
+												>
+													<Check size={21} color="#FFFFFF" />
 												</TouchableOpacity>
-												<TouchableOpacity onPress={() => handleCollabRequest(req.id, "REJECTED")}>
-													<X size={24} color="red" />
+
+												<TouchableOpacity
+													onPress={() =>
+														handleRequest(request.id, "REJECTED")
+													}
+													style={styles.rejectButton}
+												>
+													<X size={21} color={COLORS.textPrimary} />
 												</TouchableOpacity>
 											</View>
 										</View>
 									))}
 								</View>
-								<View style={styles.dividerModal}></View>
-							</>
-						)}
+							)}
+
+							{collabRequests.length > 0 && (
+								<View style={styles.modalSection}>
+									<Text style={styles.modalSectionTitle}>
+										Collaboration requests
+									</Text>
+
+									{collabRequests.map((req: any) => (
+										<View key={req.id} style={styles.requestRow}>
+											<View style={styles.requestUser}>
+												<Image
+													source={{
+														uri:
+															req.playlist?.imageUrl ||
+															"https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png",
+													}}
+													style={styles.requestAvatar}
+												/>
+
+												<View style={styles.requestInfo}>
+													<Text
+														style={styles.requestUsername}
+														numberOfLines={1}
+													>
+														{req.playlist?.name}
+													</Text>
+
+													<Text
+														style={styles.requestDescription}
+														numberOfLines={1}
+													>
+														Invited by {req.playlist?.owner?.username}
+													</Text>
+												</View>
+											</View>
+
+											<View style={styles.requestActions}>
+												<TouchableOpacity
+													onPress={() =>
+														handleCollabRequest(req.id, "ACCEPTED")
+													}
+													style={styles.acceptButton}
+												>
+													<Check size={21} color="#FFFFFF" />
+												</TouchableOpacity>
+
+												<TouchableOpacity
+													onPress={() =>
+														handleCollabRequest(req.id, "REJECTED")
+													}
+													style={styles.rejectButton}
+												>
+													<X size={21} color={COLORS.textPrimary} />
+												</TouchableOpacity>
+											</View>
+										</View>
+									))}
+								</View>
+							)}
+						</ScrollView>
 					</View>
 				</View>
 			</Modal>
 
-			<Modal visible={isAddFriendModalVisible} animationType="slide" transparent={true}>
+			<Modal visible={isAddFriendModalVisible} animationType="fade" transparent={true}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContainer}>
-						<TouchableOpacity onPress={() => setIsAddFriendModalVisible(false)} style={styles.closeModalBtn}>
-							<X size={24} color="black" />
-						</TouchableOpacity>
 
-						<TextInput
-							value={userSearchQuery}
-							onChangeText={handleUserSearch}
-							placeholder="Search a friend..."
-							autoCapitalize="none"
-							style={styles.searchInput}
-						/>
-
-						{userSearchResults.map((user: any) => (
-							<View key={user.id} style={styles.searchResultItem}>
-								<View style={styles.searchResultInfo}>
-									<Image source={{ uri: user.profileImage }} style={styles.searchResultImage} />
-									<Text>{user.username}</Text>
-								</View>
-								<TouchableOpacity onPress={() => sendFriendRequest(user.id)}>
-									{sentRequests.includes(user.id) ? (
-										<Check size={22} color="green" />
-									) : (
-										<UserPlus size={22} color="black" />
-									)}
-								</TouchableOpacity>
+						<View style={styles.modalHeader}>
+							<View>
+								<Text style={styles.modalTitle}>Add a friend</Text>
+								<Text style={styles.modalSubtitle}>
+									Search for someone to add to your friends
+								</Text>
 							</View>
-						))}
+
+							<TouchableOpacity
+								onPress={() => setIsAddFriendModalVisible(false)}
+								style={styles.closeModalBtn}
+							>
+								<X size={24} color={COLORS.textPrimary} />
+							</TouchableOpacity>
+						</View>
+
+						<View style={styles.searchContainer}>
+							<UserPlus
+								size={20}
+								color={COLORS.textMuted}
+							/>
+
+							<TextInput
+								value={userSearchQuery}
+								onChangeText={handleUserSearch}
+								placeholder="Search a friend..."
+								placeholderTextColor={COLORS.textMuted}
+								autoCapitalize="none"
+								style={styles.searchInput}
+							/>
+						</View>
+
+						{userSearchResults.length > 0 && (
+							<View style={styles.searchResults}>
+								{userSearchResults.map((user: any) => (
+									<View key={user.id} style={styles.searchResultItem}>
+										<View style={styles.searchResultInfo}>
+											{user.profileImage ? (
+												<Image
+													source={{ uri: user.profileImage }}
+													style={styles.searchResultImage}
+												/>
+											) : (
+												<View style={styles.searchResultImage} />
+											)}
+
+											<Text style={styles.searchResultUsername}>
+												{user.username}
+											</Text>
+										</View>
+
+										<TouchableOpacity
+											onPress={() => sendFriendRequest(user.id)}
+											style={[
+												styles.addFriendButton,
+												sentRequests.includes(user.id) &&
+													styles.friendRequestSent,
+											]}
+										>
+											{sentRequests.includes(user.id) ? (
+												<Check
+													size={19}
+													color={COLORS.primary}
+												/>
+											) : (
+												<UserPlus
+													size={19}
+													color={COLORS.textPrimary}
+												/>
+											)}
+										</TouchableOpacity>
+									</View>
+								))}
+							</View>
+						)}
+
+						{userSearchQuery.trim() !== "" &&
+							userSearchResults.length === 0 && (
+								<Text style={styles.noResultsText}>
+									No users found
+								</Text>
+							)}
 					</View>
 				</View>
 			</Modal>
@@ -341,10 +455,16 @@ const styles = StyleSheet.create({
 	scrollView: {
 		flex: 1,
 	},
+	searchResults: { marginTop: 2, },
+
 	scrollContent: {
 		paddingBottom: 170,
 		paddingTop: 20,
 	},
+	searchResultUsername: { fontFamily: FONTS.semiBold, fontSize: 15, color: COLORS.textPrimary, marginLeft: 12, },
+	addFriendButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#F1F1F1", alignItems: "center", justifyContent: "center", },
+	friendRequestSent: { backgroundColor: "#E8F5E9", },
+	noResultsText: { fontFamily: FONTS.regular, fontSize: 14, color: COLORS.textMuted, textAlign: "center", paddingVertical: 20, },
 	header: {
 		paddingHorizontal: 24,
 		marginBottom: 16,
@@ -391,7 +511,7 @@ const styles = StyleSheet.create({
 	},
 	statsRow: {
 		flexDirection: "row",
-		justifyContent: "space-between",
+		justifyContent: "space-around",
 		alignItems: "center",
 		marginVertical: 24,
 		paddingHorizontal: 24,
@@ -425,21 +545,6 @@ const styles = StyleSheet.create({
 		marginHorizontal: 24,
 		marginVertical: 12,
 	},
-	modalOverlay: {
-		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.5)",
-		justifyContent: "center",
-		padding: 20,
-	},
-	modalContainer: {
-		backgroundColor: "white",
-		borderRadius: 20,
-		padding: 20,
-		maxHeight: "80%",
-	},
-	closeModalBtn: {
-		marginBottom: 20,
-	},
 	sectionHeaderModal: {
 		flexDirection: "row",
 		justifyContent: "space-between",
@@ -448,11 +553,6 @@ const styles = StyleSheet.create({
 	},
 	activityContainerModal: {
 		paddingHorizontal: 0,
-	},
-	requestActions: {
-		flexDirection: "row",
-		gap: 16,
-		marginBottom: 20,
 	},
 	dividerModal: {
 		height: 1,
@@ -481,5 +581,135 @@ const styles = StyleSheet.create({
 		width: 40,
 		height: 40,
 		borderRadius: 20,
-	}
+	},
+	modalOverlay: {
+		flex: 1,
+		backgroundColor: "rgba(0, 0, 0, 0.45)",
+		justifyContent: "center",
+		paddingHorizontal: 24,
+	},
+	
+	modalContainer: {
+		backgroundColor: "#FFFFFF",
+		borderRadius: 24,
+		paddingHorizontal: 20,
+		paddingTop: 18,
+		paddingBottom: 8,
+		maxHeight: "75%",
+	},
+	
+	modalHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		marginBottom: 24,
+	},
+	
+	modalTitle: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 22,
+		color: COLORS.textPrimary,
+	},
+	
+	closeModalBtn: {
+		width: 40,
+		height: 40,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	
+	modalContent: {
+		paddingBottom: 8,
+	},
+	
+	modalSection: {
+		marginBottom: 24,
+	},
+	
+	modalSectionTitle: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 16,
+		color: COLORS.textPrimary,
+		marginBottom: 14,
+	},
+	
+	requestRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		paddingVertical: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: COLORS.cardBorder,
+	},
+	
+	requestUser: {
+		flexDirection: "row",
+		alignItems: "center",
+		flex: 1,
+		minWidth: 0,
+	},
+	
+	requestAvatar: {
+		width: 52,
+		height: 52,
+		borderRadius: 26,
+		backgroundColor: "#E0E0E0",
+	},
+	
+	requestInfo: {
+		flex: 1,
+		marginLeft: 12,
+		marginRight: 12,
+	},
+	
+	requestUsername: {
+		fontFamily: FONTS.semiBold,
+		fontSize: 15,
+		color: COLORS.textPrimary,
+		marginBottom: 4,
+	},
+	
+	requestDescription: {
+		fontFamily: FONTS.regular,
+		fontSize: 13,
+		color: COLORS.textMuted,
+	},
+	
+	requestActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+	},
+	
+	acceptButton: {
+		width: 38,
+		height: 38,
+		borderRadius: 19,
+		backgroundColor: COLORS.primary,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	
+	rejectButton: {
+		width: 38,
+		height: 38,
+		borderRadius: 19,
+		backgroundColor: "#F1F1F1",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	modalSubtitle: {
+		fontFamily: FONTS.regular,
+		fontSize: 13,
+		color: COLORS.textMuted,
+		marginTop: 4,
+		maxWidth: 250,
+	},
+	searchContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		height: 52,
+		paddingHorizontal: 15,
+		marginBottom: 16
+	},
 });

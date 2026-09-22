@@ -65,19 +65,19 @@ export default function Library() {
                 if (data && data.length > 0) {
                     setLocation({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
                 } else {
-                    alert("Adresse introuvable");
+                    alert("Cannot find address");
                 }
             } else {
                 const result = await Location.geocodeAsync(addressQuery);
                 if (result.length > 0) {
                     setLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
                 } else {
-                    alert("Adresse introuvable");
+                    alert("Cannot find address");
                 }
             }
         } catch (e) {
             console.error(e);
-            alert("Erreur lors de la recherche de l'adresse.");
+            alert("Error while looking for the address.");
         }
     };
 
