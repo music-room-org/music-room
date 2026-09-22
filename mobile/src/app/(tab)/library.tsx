@@ -56,20 +56,30 @@ export default function Library() {
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
     const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
-	const geocodeAddress = async () => {
-		if (!addressQuery.trim()) return;
-		try {
-			const result = await Location.geocodeAsync(addressQuery);
-			if (result.length > 0) {
-				setLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
-			} else {
-				alert("Adresse introuvable");
-			}
-		} catch (e) {
-			console.error(e);
-			alert("Erreur lors de la recherche de l'adresse.");
-		}
-	};
+    const geocodeAddress = async () => {
+        if (!addressQuery.trim()) return;
+        try {
+            if (Platform.OS === 'web') {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    setLocation({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
+                } else {
+                    alert("Adresse introuvable");
+                }
+            } else {
+                const result = await Location.geocodeAsync(addressQuery);
+                if (result.length > 0) {
+                    setLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
+                } else {
+                    alert("Adresse introuvable");
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Erreur lors de la recherche de l'adresse.");
+        }
+    };
 
 	const handleCreatePlaylist = async () => {
 		if (!newPlaylistName.trim()) {
