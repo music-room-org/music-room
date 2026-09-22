@@ -19,7 +19,6 @@ const ICONS = {
 function CustomTabBar({ state, navigation, hasNotification }: BottomTabBarProps & { hasNotification: boolean }) {
 	return (
 		<View style={styles.tabBarContainer}>
-			<PlayerBar />
 			<View style={styles.tabBar}>
 				{state.routes.map((route, index) => {
 					const activeRouteName = state.routes[state.index].name;

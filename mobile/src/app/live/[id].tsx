@@ -6,6 +6,7 @@ import { COLORS, FONTS, API_BASE_URL } from "@/constants";
 import { useState, useCallback, useEffect, useRef } from "react";
 import * as SecureStore from "expo-secure-store";
 import { usePlayer } from "@/context/PlayerContext";
+import { PlayerBar } from "@/components";
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
@@ -14,9 +15,9 @@ let MapView: any;
 let Marker: any;
 
 if (Platform.OS !== 'web') {
-    const Maps = require('react-native-maps');
-    MapView = Maps.default;
-    Marker = Maps.Marker;
+	const Maps = require('react-native-maps');
+	MapView = Maps.default;
+	Marker = Maps.Marker;
 }
 
 async function getToken() {
@@ -208,7 +209,14 @@ export default function LiveSession() {
 			});
 			if (response.ok) {
 				const nextTrackData = await response.json();
-				playTrack(nextTrackData.track);
+				
+				playTrack({
+					id: nextTrackData.track.sourceId,
+					title: nextTrackData.track.title,
+					artist: nextTrackData.track.artist,
+					thumbnail: `https://i.ytimg.com/vi/${nextTrackData.track.sourceId}/hqdefault.jpg`
+				});
+				
 				fetchSession();
 			} else {
 				showError("No tracks in queue!");
@@ -466,7 +474,7 @@ export default function LiveSession() {
 					)}
 				</ScrollView>
 			</View>
-
+			
 			{/* Modale d'Erreur */}
 			<Modal visible={errorModalVisible} animationType="fade" transparent onRequestClose={() => setErrorModalVisible(false)}>
 				<View style={styles.modalOverlay}>
