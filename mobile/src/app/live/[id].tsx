@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, ScrollView, Image, ActivityIndicator, Modal, Switch } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, ScrollView, Image, ActivityIndicator, Modal, Switch, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ThumbsUp, Play, Plus, Search, Power, Pencil, X, MoreVertical } from "lucide-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -6,17 +6,27 @@ import { COLORS, FONTS, API_BASE_URL } from "@/constants";
 import { useState, useCallback, useEffect, useRef } from "react";
 import * as SecureStore from "expo-secure-store";
 import { usePlayer } from "@/context/PlayerContext";
-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 
+// Helper to calculate distance on the frontend
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+	const R = 6371e3;
+	const p1 = (lat1 * Math.PI) / 180;
+	const p2 = (lat2 * Math.PI) / 180;
+	const dp = ((lat2 - lat1) * Math.PI) / 180;
+	const dl = ((lon2 - lon1) * Math.PI) / 180;
+	const a = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	return R * c;
+}
+
 let MapView: any;
 let Marker: any;
-
 if (Platform.OS !== 'web') {
-    const Maps = require('react-native-maps');
-    MapView = Maps.default;
-    Marker = Maps.Marker;
+	const Maps = require('react-native-maps');
+	MapView = Maps.default;
+	Marker = Maps.Marker;
 }
 
 async function getToken() {
@@ -30,6 +40,7 @@ export default function LiveSession() {
 	const { playTrack } = usePlayer();
 
 	const isClosing = useRef(false);
+	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const shouldRedirectRef = useRef(false);
 
 	const [sessionName, setSessionName] = useState("Loading Session...");
@@ -51,7 +62,6 @@ export default function LiveSession() {
 	
 	const [editAddressQuery, setEditAddressQuery] = useState("");
 	const [editLocation, setEditLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
-	
 	const [editStartTime, setEditStartTime] = useState(new Date());
 	const [editEndTime, setEditEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
 	const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -59,12 +69,19 @@ export default function LiveSession() {
 	const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 	const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
+	const [sessionLocation, setSessionLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
+	const [sessionStartTime, setSessionStartTime] = useState(new Date());
+	const [sessionEndTime, setSessionEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
+
+	// New states for GPS verification at launch
+	const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
+	const [isOnSiteAndInTime, setIsOnSiteAndInTime] = useState(false);
+
 	const [newCollaborators, setNewCollaborators] = useState<{id: string, username: string}[]>([]);
 	const [friendSearchQuery, setFriendSearchQuery] = useState("");
 	const [friendsList, setFriendsList] = useState<any[]>([]);
 	const [myUsername, setMyUsername] = useState("");
 
-	// Modales personnalisées pour remplacer les alerts
 	const [errorModalVisible, setErrorModalVisible] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 	
@@ -111,19 +128,21 @@ export default function LiveSession() {
 				setInvitedUsers(data.invitedUsers || []);
 				
 				if (data.latitude && data.longitude) {
-					setEditLocation({ latitude: data.latitude, longitude: data.longitude });
+					setSessionLocation({ latitude: data.latitude, longitude: data.longitude });
 				}
-				if (data.startTime) setEditStartTime(new Date(data.startTime));
-				if (data.endTime) setEditEndTime(new Date(data.endTime));
+				if (data.startTime) setSessionStartTime(new Date(data.startTime));
+				if (data.endTime) setSessionEndTime(new Date(data.endTime));
 				
 				if (data.liveSessionTracks) {
 					setTracks(data.liveSessionTracks);
 				}
 			} else if (response.status === 404) {
 				isClosing.current = true;
-				showError("This event has finished.", true);
+				if (intervalRef.current) clearInterval(intervalRef.current);
+				showError("This event has ended.", true);
 			} else {
 				isClosing.current = true;
+				if (intervalRef.current) clearInterval(intervalRef.current);
 				const err = await response.json();
 				showError(`Access error: ${err.message}`, true);
 			}
@@ -134,18 +153,69 @@ export default function LiveSession() {
 
 	useEffect(() => {
 		fetchSession();
-		const interval = setInterval(fetchSession, 3000);
-		return () => clearInterval(interval);
+		intervalRef.current = setInterval(fetchSession, 3000);
+		return () => {
+			if (intervalRef.current) clearInterval(intervalRef.current);
+		};
 	}, [fetchSession]);
+
+	// Location verification as soon as the page is loaded
+	useEffect(() => {
+		let mounted = true;
+		const isOwner = hostUserId === myUserId;
+		const isInvited = invitedUsers.some(u => u.id === myUserId);
+
+		if (license === 'LOCATION_TIME' && !isOwner && !isInvited && sessionLocation.latitude) {
+			const verifyAccess = async () => {
+				const now = new Date();
+				if (sessionStartTime && now < sessionStartTime) return;
+				if (sessionEndTime && now > sessionEndTime) return;
+
+				try {
+					const { status } = await Location.requestForegroundPermissionsAsync();
+					if (status !== 'granted') {
+						if (mounted) showError("You must allow location access to participate in this event.", true);
+						return;
+					}
+
+					const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+					if (mounted) {
+						setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+						const dist = getDistance(sessionLocation.latitude, sessionLocation.longitude, loc.coords.latitude, loc.coords.longitude);
+						
+						if (dist <= 150) {
+							setIsOnSiteAndInTime(true);
+						} else {
+							setIsOnSiteAndInTime(false);
+							showError(`You are too far away from the event.`, true);
+						}
+					}
+				} catch (err) {
+					console.error("GPS error:", err);
+				}
+			};
+			verifyAccess();
+		}
+	}, [license, hostUserId, myUserId, sessionLocation, sessionStartTime, sessionEndTime, invitedUsers]);
 
 	const geocodeEditAddress = async () => {
 		if (!editAddressQuery.trim()) return;
 		try {
-			const result = await Location.geocodeAsync(editAddressQuery);
-			if (result.length > 0) {
-				setEditLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
+			if (Platform.OS === 'web') {
+				const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(editAddressQuery)}`);
+				const data = await response.json();
+				if (data && data.length > 0) {
+					setEditLocation({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
+				} else {
+					showError("Cannot find address");
+				}
 			} else {
-				showError("Cannot find address");
+				const result = await Location.geocodeAsync(editAddressQuery);
+				if (result.length > 0) {
+					setEditLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
+				} else {
+					showError("Cannot find address");
+				}
 			}
 		} catch (e) {
 			console.error(e);
@@ -155,24 +225,22 @@ export default function LiveSession() {
 
 	const handleVote = async (trackId: string) => {
 		try {
-			let userLat: number | undefined;
-			let userLon: number | undefined;
+			let currentLat = userLocation?.latitude;
+			let currentLon = userLocation?.longitude;
 
-			// Seuls les invités doivent fournir leur localisation
-			if (license === 'LOCATION_TIME' && myUserId !== hostUserId) {
+			const isOwner = hostUserId === myUserId;
+			const isInvited = invitedUsers.some(u => u.id === myUserId);
+
+			if (license === 'LOCATION_TIME' && !isOwner && !isInvited && (!currentLat || !currentLon)) {
 				const { status } = await Location.requestForegroundPermissionsAsync();
-				
 				if (status !== 'granted') {
-					showError("You have to accept GPS tracking to participate to this event.");
+					showError("You must allow location access to participate in this event.");
 					return;
 				}
-
-				const location = await Location.getCurrentPositionAsync({
-					accuracy: Location.Accuracy.Highest
-				});
-				
-				userLat = location.coords.latitude;
-				userLon = location.coords.longitude;
+				const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+				currentLat = loc.coords.latitude;
+				currentLon = loc.coords.longitude;
+				setUserLocation({ latitude: currentLat, longitude: currentLon });
 			}
 
 			const token = await getToken();
@@ -182,21 +250,21 @@ export default function LiveSession() {
 				body: JSON.stringify({ 
 					sessionId: id, 
 					trackId,
-					latitude: userLat,
-					longitude: userLon
+					latitude: currentLat,
+					longitude: currentLon
 				})
 			});
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-				showError(errorData.message || "Impossible to vote");
+				showError(errorData.message || "Unable to vote");
 				return;
 			}
 			
 			fetchSession();
 		} catch (err) {
 			console.error(err);
-			showError("Error while retrieving GPS tracking or sending vote.");
+			showError("Error while retrieving your location or sending the vote.");
 		}
 	};
 
@@ -235,24 +303,22 @@ export default function LiveSession() {
 
 	const handleAddTrack = async (track: any) => {
 		try {
-			let userLat: number | undefined;
-			let userLon: number | undefined;
+			let currentLat = userLocation?.latitude;
+			let currentLon = userLocation?.longitude;
 
-			// Seuls les invités doivent fournir leur localisation
-			if (license === 'LOCATION_TIME' && myUserId !== hostUserId) {
+			const isOwner = hostUserId === myUserId;
+			const isInvited = invitedUsers.some(u => u.id === myUserId);
+
+			if (license === 'LOCATION_TIME' && !isOwner && !isInvited && (!currentLat || !currentLon)) {
 				const { status } = await Location.requestForegroundPermissionsAsync();
-				
 				if (status !== 'granted') {
-					showError("You have to accept GPS tracking to add a title to this event");
+					showError("You must allow location access to add a track to this event.");
 					return;
 				}
-
-				const location = await Location.getCurrentPositionAsync({
-					accuracy: Location.Accuracy.Highest
-				});
-				
-				userLat = location.coords.latitude;
-				userLon = location.coords.longitude;
+				const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+				currentLat = loc.coords.latitude;
+				currentLon = loc.coords.longitude;
+				setUserLocation({ latitude: currentLat, longitude: currentLon });
 			}
 
 			const token = await getToken();
@@ -263,21 +329,21 @@ export default function LiveSession() {
 					title: track.title, 
 					artist: track.artist || "Unknown Artist", 
 					sourceId: track.id,
-					latitude: userLat,
-					longitude: userLon
+					latitude: currentLat,
+					longitude: currentLon
 				})
 			});
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-				showError(`Cannot add : ${errorData.message || response.status}`);
+				showError(`The server rejected the addition: ${errorData.message || response.status}`);
 				return;
 			}
 			setSearchQuery("");
 			setSearchResults([]);
 			fetchSession();
 		} catch (err) {
-			showError("Error connecting to the serveur or GPS tracking.");
+			showError("Error connecting to the backend server or retrieving your location.");
 		}
 	};
 
@@ -332,20 +398,32 @@ export default function LiveSession() {
 	const handleEndSession = async () => {
 		try {
 			isClosing.current = true;
+			if (intervalRef.current) clearInterval(intervalRef.current);
+
 			const token = await getToken();
-			await fetch(`${apiUrl}/live_session/${id}`, {
+			const response = await fetch(`${apiUrl}/live_session/${id}`, {
 				method: "DELETE",
 				headers: { Authorization: `Bearer ${token}` }
 			});
-			router.replace("/library");
+			
+			if (response.ok) {
+				router.replace("/library");
+			} else {
+				isClosing.current = false;
+				const err = await response.json();
+				showError(`Unable to end the session: ${err.message}`);
+			}
 		} catch (err) {
 			isClosing.current = false;
+			showError("Network error while trying to end the session.");
 		}
 	};
 
 	const isOwner = hostUserId === myUserId;
 	const isInvited = invitedUsers.some(u => u.id === myUserId);
-	const canModifyTracks = isOwner || license === 'OPEN' || isInvited;
+	
+	// The boolean controls when the search bar should be displayed
+	const canModifyTracks = isOwner || license === 'OPEN' || isInvited || (license === 'LOCATION_TIME' && isOnSiteAndInTime);
 
 	const filteredFriends = friendSearchQuery.trim() === "" 
 		? [] 
@@ -375,6 +453,9 @@ export default function LiveSession() {
 								setEditName(sessionName);
 								setEditIsPublic(isPublic);
 								setEditLicense(license);
+								setEditLocation(sessionLocation);
+								setEditStartTime(sessionStartTime);
+								setEditEndTime(sessionEndTime);
 								setIsEditModalVisible(true);
 							}} style={styles.iconButton}>
 								<Pencil size={20} color={COLORS.primary} />
@@ -446,7 +527,7 @@ export default function LiveSession() {
 										<Text style={styles.voteText}>{item.votes?.length || 0}</Text>
 									</TouchableOpacity>
 
-									{canModifyTracks && (
+									{isOwner && (
 										<TouchableOpacity 
 											onPress={() => {
 												setTrackToDelete(item.trackId);
@@ -467,12 +548,12 @@ export default function LiveSession() {
 				</ScrollView>
 			</View>
 
-			{/* Modale d'Erreur */}
+			{/* Error Modal */}
 			<Modal visible={errorModalVisible} animationType="fade" transparent onRequestClose={() => setErrorModalVisible(false)}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.compactModalContent}>
 						<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-							<Text style={[styles.modalTitle, { marginBottom: 0 }]}>Attention</Text>
+							<Text style={[styles.modalTitle, { marginBottom: 0 }]}>Warning</Text>
 							<TouchableOpacity onPress={() => {
 								setErrorModalVisible(false);
 								if (shouldRedirectRef.current) router.replace("/library");
@@ -493,7 +574,7 @@ export default function LiveSession() {
 				</View>
 			</Modal>
 
-			{/* Modale de Suppression */}
+			{/* Delete Modal */}
 			<Modal visible={isDeleteModalVisible} animationType="fade" transparent onRequestClose={() => setIsDeleteModalVisible(false)}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.compactModalContent}>
@@ -503,7 +584,7 @@ export default function LiveSession() {
 								<X size={20} color={COLORS.textMuted} />
 							</TouchableOpacity>
 						</View>
-						<Text style={styles.modalText}>Do you really want to delete this title from the event ?</Text>
+						<Text style={styles.modalText}>Do you really want to delete this title from the event?</Text>
 						<View style={styles.modalButtons}>
 							<TouchableOpacity style={styles.cancelButton} onPress={() => setIsDeleteModalVisible(false)}>
 								<Text style={styles.cancelButtonText}>Cancel</Text>
@@ -516,7 +597,7 @@ export default function LiveSession() {
 				</View>
 			</Modal>
 
-			{/* Modale d'Édition */}
+			{/* Edit Modal */}
 			<Modal visible={isEditModalVisible} animationType="fade" transparent onRequestClose={() => setIsEditModalVisible(false)}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContent}>
@@ -577,8 +658,8 @@ export default function LiveSession() {
 										{Platform.OS === 'web' ? (
 											<iframe
 												src={`https://www.openstreetmap.org/export/embed.html?bbox=${editLocation.longitude - 0.01},${editLocation.latitude - 0.01},${editLocation.longitude + 0.01},${editLocation.latitude + 0.01}&layer=mapnik&marker=${editLocation.latitude},${editLocation.longitude}`}
-												style={{ width: '100%', height: '100%', border: 'none' }}
-												title="Map de l'événement"
+												style={{ width: '100%', height: '100%', border: 'none' } as any}
+												title="Event map"
 											/>
 										) : (
 											<MapView 

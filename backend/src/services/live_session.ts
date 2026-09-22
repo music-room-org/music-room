@@ -144,7 +144,7 @@ export class LiveSessionService {
 
                 const distance = getDistanceInMeters(session.latitude, session.longitude, userLat, userLon);
                 
-                if (distance > 3) {
+                if (distance > 300) {
                     throw new ForbiddenException(`You have to be on the event's site to vote and add tracks (less than 3 meters).`);
                 }
             }
@@ -262,7 +262,7 @@ export class LiveSessionService {
 
                 const distance = getDistanceInMeters(session.latitude, session.longitude, userLat, userLon);
                 
-                if (distance > 1) {
+                if (distance > 300) {
                     throw new ForbiddenException(`You have to be on the event's site to vote and add tracks (less than 3 meters)..`);
                 }
             }
