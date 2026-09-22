@@ -6,9 +6,17 @@ import { LibraryPlaylistItem } from "@/components";
 import { useState, useCallback } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import MapView, { Marker } from 'react-native-maps';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
+
+let MapView: any;
+let Marker: any;
+
+if (Platform.OS !== 'web') {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default;
+    Marker = Maps.Marker;
+}
 
 async function getToken() {
 	if (Platform.OS === "web")  return localStorage.getItem("userToken");
@@ -36,15 +44,17 @@ export default function Library() {
 	const [isPublic, setIsPublic] = useState(true);
 	const [license, setLicense] = useState('OPEN'); 
 
-	// Recherche et Coordonnées GPS
-	const [addressQuery, setAddressQuery] = useState("");
-	const [location, setLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
-	
-	// Heures
-	const [startTime, setStartTime] = useState(new Date());
-	const [endTime, setEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
-	const [showStartPicker, setShowStartPicker] = useState(false);
-	const [showEndPicker, setShowEndPicker] = useState(false);
+    // Recherche et Coordonnées GPS
+    const [addressQuery, setAddressQuery] = useState("");
+    const [location, setLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
+    
+    // Heures ET Dates
+    const [startTime, setStartTime] = useState(new Date());
+    const [endTime, setEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
+    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+    const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+    const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
 	const geocodeAddress = async () => {
 		if (!addressQuery.trim()) return;
@@ -255,7 +265,6 @@ export default function Library() {
                             </TouchableOpacity>
                         </View>
                         
-                        {/* L'option Playlist Classique que j'avais effacée */}
                         <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
                             <List size={24} color={COLORS.textPrimary} />
                             <Text style={styles.typeMenuText}> Playlist classique </Text>
@@ -336,60 +345,117 @@ export default function Library() {
 												</TouchableOpacity>
 											</View>
 
-											<View style={styles.mapContainer}>
-												<MapView 
-													style={styles.map}
-													region={{
-														latitude: location.latitude,
-														longitude: location.longitude,
-														latitudeDelta: 0.05,
-														longitudeDelta: 0.05,
-													}}
-												>
-													<Marker 
-														coordinate={location} 
-														draggable 
-														onDragEnd={(e) => setLocation(e.nativeEvent.coordinate)}
-													/>
-												</MapView>
-											</View>
+                                            <View style={styles.mapContainer}>
+                                                {Platform.OS === 'web' ? (
+                                                    <iframe
+                                                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${location.longitude - 0.01},${location.latitude - 0.01},${location.longitude + 0.01},${location.latitude + 0.01}&layer=mapnik&marker=${location.latitude},${location.longitude}`}
+                                                        style={{ width: '100%', height: '100%', border: 'none' }}
+                                                        title="Map de l'événement"
+                                                    />
+                                                ) : (
+                                                    <MapView 
+                                                        style={styles.map}
+                                                        region={{
+                                                            latitude: location.latitude,
+                                                            longitude: location.longitude,
+                                                            latitudeDelta: 0.05,
+                                                            longitudeDelta: 0.05,
+                                                        }}
+                                                    >
+                                                        <Marker 
+                                                            coordinate={location} 
+                                                            draggable 
+                                                            onDragEnd={(e: any) => setLocation(e.nativeEvent.coordinate)}
+                                                        />
+                                                    </MapView>
+                                                )}
+                                            </View>
 
-											<Text style={styles.inputLabel}>Créneau de l'événement</Text>
-											<View style={styles.timeRow}>
-												<TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartPicker(true)}>
-													<Text style={styles.timeBtnText}>Début: {startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
-												</TouchableOpacity>
-												<TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndPicker(true)}>
-													<Text style={styles.timeBtnText}>Fin: {endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
-												</TouchableOpacity>
-											</View>
+                                            <Text style={styles.inputLabel}>Début de l'événement</Text>
+                                            <View style={styles.timeRow}>
+                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartDatePicker(true)}>
+                                                    <Text style={styles.timeBtnText}>{startTime.toLocaleDateString()}</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartTimePicker(true)}>
+                                                    <Text style={styles.timeBtnText}>{startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                                                </TouchableOpacity>
+                                            </View>
 
-											{showStartPicker && (
-												<DateTimePicker
-													value={startTime}
-													mode="time"
-													display="default"
-													onChange={(event, date) => {
-														setShowStartPicker(false);
-														if (date) setStartTime(date);
-													}}
-												/>
-											)}
-											{showEndPicker && (
-												<DateTimePicker
-													value={endTime}
-													mode="time"
-													display="default"
-													onChange={(event, date) => {
-														setShowEndPicker(false);
-														if (date) setEndTime(date);
-													}}
-												/>
-											)}
-										</View>
-									)}
-								</>
-							)}
+                                            <Text style={styles.inputLabel}>Fin de l'événement</Text>
+                                            <View style={styles.timeRow}>
+                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndDatePicker(true)}>
+                                                    <Text style={styles.timeBtnText}>{endTime.toLocaleDateString()}</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndTimePicker(true)}>
+                                                    <Text style={styles.timeBtnText}>{endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                                                </TouchableOpacity>
+                                            </View>
+
+                                            {showStartDatePicker && (
+                                                <DateTimePicker
+                                                    value={startTime}
+                                                    mode="date"
+                                                    display="default"
+                                                    onChange={(event, date) => {
+                                                        setShowStartDatePicker(false);
+                                                        if (date) {
+                                                            const newDate = new Date(startTime);
+                                                            newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+                                                            setStartTime(newDate);
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                            {showStartTimePicker && (
+                                                <DateTimePicker
+                                                    value={startTime}
+                                                    mode="time"
+                                                    display="default"
+                                                    onChange={(event, date) => {
+                                                        setShowStartTimePicker(false);
+                                                        if (date) {
+                                                            const newDate = new Date(startTime);
+                                                            newDate.setHours(date.getHours(), date.getMinutes(), 0);
+                                                            setStartTime(newDate);
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+
+                                            {showEndDatePicker && (
+                                                <DateTimePicker
+                                                    value={endTime}
+                                                    mode="date"
+                                                    display="default"
+                                                    onChange={(event, date) => {
+                                                        setShowEndDatePicker(false);
+                                                        if (date) {
+                                                            const newDate = new Date(endTime);
+                                                            newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+                                                            setEndTime(newDate);
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                            {showEndTimePicker && (
+                                                <DateTimePicker
+                                                    value={endTime}
+                                                    mode="time"
+                                                    display="default"
+                                                    onChange={(event, date) => {
+                                                        setShowEndTimePicker(false);
+                                                        if (date) {
+                                                            const newDate = new Date(endTime);
+                                                            newDate.setHours(date.getHours(), date.getMinutes(), 0);
+                                                            setEndTime(newDate);
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                        </View>
+                                    )}
+                                </>
+                            )}
 
 							{(isCollabMode || (isLiveMode && (!isPublic || license === 'INVITED_ONLY'))) && (
 								<>
@@ -433,27 +499,28 @@ export default function Library() {
 								</>
 							)}
 
-							<View style={styles.modalActions}>
-								<TouchableOpacity onPress={() => {
-									setIsCreateModalVisible(false);
-									setNewPlaylistName("");
-									setFriendSearchQuery("");
-									setSelectedFriends([]);
-									setAddressQuery("");
-									setIsLiveMode(false);
-								}} style={styles.cancelBtn}>
-									<Text style={styles.cancelBtnText}>Cancel</Text>
-								</TouchableOpacity>
-								<TouchableOpacity onPress={handleCreatePlaylist} style={styles.saveBtn}>
-									<Text style={styles.saveBtnText}>Create</Text>
-								</TouchableOpacity>
-							</View>
-						</ScrollView>
-					</View>
-				</View>
-			</Modal>
-		</SafeAreaView>
-	);
+                            <View style={styles.modalActions}>
+                                <TouchableOpacity onPress={() => {
+                                    setIsCreateModalVisible(false);
+                                    setNewPlaylistName("");
+                                    setFriendSearchQuery("");
+                                    setSelectedFriends([]);
+                                    setAddressQuery("");
+                                    setIsLiveMode(false);
+                                }} style={styles.cancelBtn}>
+                                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity onPress={handleCreatePlaylist} style={styles.saveBtn}>
+                                    <Text style={styles.saveBtnText}>Create</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({

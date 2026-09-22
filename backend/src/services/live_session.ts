@@ -1,29 +1,27 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
+function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371e3; 
+    const p1 = lat1 * Math.PI / 180;
+    const p2 = lat2 * Math.PI / 180;
+    const dp = (lat2 - lat1) * Math.PI / 180;
+    const dl = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+              Math.cos(p1) * Math.cos(p2) *
+              Math.sin(dl / 2) * Math.sin(dl / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; 
+}
+
 @Injectable()
 export class LiveSessionService {
     private prisma = new PrismaClient();
+
     constructor() {}
 
-    // async createLiveSession(name: string, ownerId: string) {
-    // const host = await this.prisma.user.findUnique({ where: { id: ownerId } });
-    // if (!host) {
-    //   throw new NotFoundException('Host user not found');
-    // }
-
-    // return this.prisma.liveSession.create({
-    //   data: {
-    //  name,
-    //  hostUserId: ownerId,
-    //  invitedUsers: {
-    //    connect: { id: ownerId },
-    //  },
-    //   },
-    // });
-    // }
-
-    // version faustine
     async createLiveSession(
         name: string, 
         ownerId: string, 
@@ -35,8 +33,8 @@ export class LiveSessionService {
         startTime?: string,
         endTime?: string
     ) {
-	    if (name && name.length > 15) throw new BadRequestException("Username cannot be longer than 15 characters.");
-        // On lie le créateur ET les utilisateurs invités
+        if (name && name.length > 15) throw new BadRequestException("Username cannot be longer than 15 characters.");
+
         const invitees = invitedUserIds.map(id => ({ id }));
         invitees.push({ id: ownerId });
 
@@ -66,7 +64,7 @@ export class LiveSessionService {
         startTime?: string,
         endTime?: string
     ) {
-	    if (name && name.length > 15) throw new BadRequestException("Username cannot be longer than 15 characters.");
+        if (name && name.length > 15) throw new BadRequestException("Username cannot be longer than 15 characters.");
         const invitees = invitedUserIds.map(id => ({ id }));
         
         return await this.prisma.liveSession.update({
@@ -84,7 +82,6 @@ export class LiveSessionService {
         });
     }
 
-    // version faustine
     async getAvailableSessions(userId: string) {
         return await this.prisma.liveSession.findMany({
             where: {
@@ -109,41 +106,48 @@ export class LiveSessionService {
         });
     }
 
-//   async voteForTrack(sessionId: string, trackId: string, userId: string) {
-//  try {
-//    return await this.prisma.vote.create({
-//      data: {
-//        liveSessionId: sessionId,
-//        trackId,
-//        userId,
-//      },
-//    });
-//  } catch (err) {
-//    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-//      throw new BadRequestException('User has already voted for this track');
-//    }
-//    throw err;
-//  }
-//   }
-
-    // version faustoche
-    async voteForTrack(sessionId: string, trackId: string, userId: string) {
+    async voteForTrack(sessionId: string, trackId: string, userId: string, userLat?: number, userLon?: number) {
         const session = await this.prisma.liveSession.findUnique({
             where: { id: sessionId },
             include: { invitedUsers: true }
         });
 
-        if (!session) throw new NotFoundException('Session introuvable');
+        if (!session) throw new NotFoundException('Impossible to find session');
 
         const isHost = session.hostUserId === userId;
         const isInvited = session.invitedUsers.some(user => user.id === userId);
 
         if (!session.isPublic && !isInvited && !isHost) {
-                throw new ForbiddenException("Vous n'avez pas accès à cet événement.");
+                throw new ForbiddenException("You do not have access to this event.");
         }
 
         if (session.license === 'INVITED_ONLY' && !isInvited && !isHost) {
-                throw new ForbiddenException("Seuls les invités peuvent voter.");
+                throw new ForbiddenException("Only users invited can vote.");
+        }
+
+        if (session.license === 'LOCATION_TIME') {
+            const now = new Date();
+            
+            // 1. Le temps s'applique à tout le monde, même l'hôte
+            if (session.startTime && now < session.startTime) {
+                throw new ForbiddenException("Event has not started yet.");
+            }
+            if (session.endTime && now > session.endTime) {
+                throw new ForbiddenException("Event is finished.");
+            }
+
+            // 2. La localisation s'applique UNIQUEMENT aux invités
+            if (!isHost && session.latitude && session.longitude) {
+                if (userLat === undefined || userLon === undefined) {
+                    throw new BadRequestException("GPS tracking is mandatory to vote for this event.");
+                }
+
+                const distance = getDistanceInMeters(session.latitude, session.longitude, userLat, userLon);
+                
+                if (distance > 3) {
+                    throw new ForbiddenException(`You have to be on the event's site to vote and add tracks (less than 3 meters).`);
+                }
+            }
         }
 
         const existingVote = await this.prisma.vote.findUnique({
@@ -198,12 +202,6 @@ export class LiveSessionService {
         await this.prisma.liveSession.delete({ where: { id: sessionId } });
     }
 
-//   async getSessionById(sessionId: string) {
-//  return await this.prisma.liveSession.findUnique({ where: {id: sessionId } });
-//   }
-
-    // VERSION FAUSTINE!!!!
-    // Récupérer la session AVEC les musiques et les votes
     async getSessionById(sessionId: string) {
         return await this.prisma.liveSession.findUnique({
             where: { id: sessionId },
@@ -219,17 +217,65 @@ export class LiveSessionService {
         });
     }
     
-    async addTrackToLiveSession(sessionId: string, title: string, artist: string, sourceId: string) {
-        // Vérifie si la piste existe déjà dans la base globale
+    async addTrackToLiveSession(
+        sessionId: string, 
+        userId: string, 
+        title: string, 
+        artist: string, 
+        sourceId: string, 
+        userLat?: number, 
+        userLon?: number
+    ) {
+        const session = await this.prisma.liveSession.findUnique({
+            where: { id: sessionId },
+            include: { invitedUsers: true }
+        });
+
+        if (!session) throw new NotFoundException('Impossible to find this session.');
+
+        const isHost = session.hostUserId === userId;
+        const isInvited = session.invitedUsers.some(user => user.id === userId);
+
+        if (!session.isPublic && !isInvited && !isHost) {
+            throw new ForbiddenException("You do not have access to this event.");
+        }
+
+        if (session.license === 'INVITED_ONLY' && !isInvited && !isHost) {
+            throw new ForbiddenException("Only users invited can vote.");
+        }
+
+        if (session.license === 'LOCATION_TIME') {
+            const now = new Date();
+            
+            if (session.startTime && now < session.startTime) {
+                throw new ForbiddenException("Event has not started yet.");
+            }
+            if (session.endTime && now > session.endTime) {
+                throw new ForbiddenException("Event is finished.");
+            }
+
+            // 2. La localisation s'applique UNIQUEMENT aux invités
+            if (!isHost && session.latitude && session.longitude) {
+                if (userLat === undefined || userLon === undefined) {
+                    throw new BadRequestException("GPS tracking is mandatory to add tracks to this event.");
+                }
+
+                const distance = getDistanceInMeters(session.latitude, session.longitude, userLat, userLon);
+                
+                if (distance > 1) {
+                    throw new ForbiddenException(`You have to be on the event's site to vote and add tracks (less than 3 meters)..`);
+                }
+            }
+        }
+
         let track = await this.prisma.track.findFirst({ where: { sourceId } });
-        
+                  
         if (!track) {
             track = await this.prisma.track.create({
                 data: { title, artist: artist || "", sourceId }
             });
         }
 
-        // Lie la piste à la session live
         return await this.prisma.liveSessionTrack.create({
             data: {
                 liveSessionId: sessionId,
