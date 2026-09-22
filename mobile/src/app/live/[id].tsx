@@ -593,7 +593,7 @@ export default function LiveSession() {
 												<Marker 
 													coordinate={editLocation} 
 													draggable 
-													onDragEnd={(e) => setEditLocation(e.nativeEvent.coordinate)}
+													onDragEnd={(e: any) => setEditLocation(e.nativeEvent.coordinate)}
 												/>
 											</MapView>
 										)}

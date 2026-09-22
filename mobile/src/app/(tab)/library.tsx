@@ -367,7 +367,7 @@ export default function Library() {
                                                         <Marker 
                                                             coordinate={location} 
                                                             draggable 
-                                                            onDragEnd={(e) => setLocation(e.nativeEvent.coordinate)}
+                                                            onDragEnd={(e: any) => setLocation(e.nativeEvent.coordinate)}
                                                         />
                                                     </MapView>
                                                 )}
