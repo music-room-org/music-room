@@ -6,9 +6,17 @@ import { LibraryPlaylistItem } from "@/components";
 import { useState, useCallback } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import MapView, { Marker } from 'react-native-maps';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
+
+let MapView: any;
+let Marker: any;
+
+if (Platform.OS !== 'web') {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default;
+    Marker = Maps.Marker;
+}
 
 async function getToken() {
     if (Platform.OS === "web")  return localStorage.getItem("userToken");
@@ -340,21 +348,29 @@ export default function Library() {
                                             </View>
 
                                             <View style={styles.mapContainer}>
-                                                <MapView 
-                                                    style={styles.map}
-                                                    region={{
-                                                        latitude: location.latitude,
-                                                        longitude: location.longitude,
-                                                        latitudeDelta: 0.05,
-                                                        longitudeDelta: 0.05,
-                                                    }}
-                                                >
-                                                    <Marker 
-                                                        coordinate={location} 
-                                                        draggable 
-                                                        onDragEnd={(e) => setLocation(e.nativeEvent.coordinate)}
+                                                {Platform.OS === 'web' ? (
+                                                    <iframe
+                                                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${location.longitude - 0.01},${location.latitude - 0.01},${location.longitude + 0.01},${location.latitude + 0.01}&layer=mapnik&marker=${location.latitude},${location.longitude}`}
+                                                        style={{ width: '100%', height: '100%', border: 'none' }}
+                                                        title="Map de l'événement"
                                                     />
-                                                </MapView>
+                                                ) : (
+                                                    <MapView 
+                                                        style={styles.map}
+                                                        region={{
+                                                            latitude: location.latitude,
+                                                            longitude: location.longitude,
+                                                            latitudeDelta: 0.05,
+                                                            longitudeDelta: 0.05,
+                                                        }}
+                                                    >
+                                                        <Marker 
+                                                            coordinate={location} 
+                                                            draggable 
+                                                            onDragEnd={(e) => setLocation(e.nativeEvent.coordinate)}
+                                                        />
+                                                    </MapView>
+                                                )}
                                             </View>
 
                                             <Text style={styles.inputLabel}>Début de l'événement</Text>
