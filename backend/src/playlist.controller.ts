@@ -1,5 +1,5 @@
-import { Controller, Post, Query, Get, Patch, Body, Delete, Param, UseGuards, Request } from '@nestjs/common';
-import { createPlaylist, getPublicPlaylists, searchPublicPlaylists, removeTrackFromPlaylist, getMyPlaylists, getRecommendedPlaylists, getPlaylistById, updatePlaylist, getUserPublicPlaylists, addTrackToPlaylist, inviteCollaborator, updateCollaborationStatus, getPendingCollaborations } from './services/playlist';
+import { Controller, Post, Query, Get, Patch, NotFoundException, ForbiddenException, Body, Delete, Param, UseGuards, Request } from '@nestjs/common';
+import { createPlaylist, getPublicPlaylists, deletePlaylist, searchPublicPlaylists, removeTrackFromPlaylist, getMyPlaylists, getRecommendedPlaylists, getPlaylistById, updatePlaylist, getUserPublicPlaylists, addTrackToPlaylist, inviteCollaborator, updateCollaborationStatus, getPendingCollaborations } from './services/playlist';
 import { Guard } from './security/guard';
 import { FriendsGateway } from './friends/friends.gateway';
 
@@ -39,6 +39,17 @@ export class PlaylistController {
 	async removeTrack(@Param('id') playlistId: string, @Param('trackId') trackId: string, @Request() request: any) {
 		return await removeTrackFromPlaylist(playlistId, trackId, request.userId);
 	}
+
+  @UseGuards(Guard)
+  @Delete(':id')
+  async deletePlaylistRoute(@Param('id') id: string, @Request() request: any) {
+      const playlist = await getPlaylistById(id);
+      if (!playlist) throw new NotFoundException("Playlist introuvable.");
+      if (playlist.ownerId !== request.userId) throw new ForbiddenException("Seul le créateur peut supprimer la playlist.");
+
+      await deletePlaylist(id);
+      return { message: 'Playlist supprimée' };
+  }
 
 	@UseGuards(Guard)
 	@Post(':id/tracks')

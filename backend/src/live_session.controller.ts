@@ -1,16 +1,4 @@
-import {
-    Controller,
-    Post,
-    Get,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    UseGuards,
-    Req,
-    NotFoundException,
-    ForbiddenException,
-} from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards, Req, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { LiveSessionService } from './services/live_session';
 import { Guard } from './security/guard';
 
@@ -19,12 +7,6 @@ export class LiveSessionController {
     constructor(private readonly liveSessionService: LiveSessionService) {}
 
     @UseGuards(Guard)
-    // @Post()
-    // async create(@Body() body: any, @Req() request: any) {
-    //  return await this.liveSessionService.createLiveSession(body.name, request.userId);
-    // }
-
-    // version faustine 
     @Post()
     async create(@Body() body: any, @Req() request: any) {
         return await this.liveSessionService.createLiveSession(
@@ -48,6 +30,7 @@ export class LiveSessionController {
         if (!session) {
             throw new NotFoundException('Live session not found');
         }
+
         if (session.hostUserId !== req.userId) {
             throw new ForbiddenException('Only the host can modify this session');
         }
@@ -91,7 +74,6 @@ export class LiveSessionController {
         if (!track) {
             throw new NotFoundException('No tracks in queue');
         }
-
         await this.liveSessionService.deleteSessionTrack(sessionId, track.trackId);
         return track;
     }
@@ -133,15 +115,26 @@ export class LiveSessionController {
     async removeTrackFromLive(@Param('id') sessionId: string, @Param('trackId') trackId: string, @Req() req: any) {
         const session = await this.liveSessionService.getSessionById(sessionId);
         if (!session) throw new NotFoundException('Session not found');
-
         const isHost = session.hostUserId === req.userId;
         const isInvited = session.invitedUsers.some(u => u.id === req.userId);
-
         if (!isHost && session.license === 'INVITED_ONLY' && !isInvited) {
             throw new ForbiddenException("Only host and invited users can delete tracks.");
         }
-
         await this.liveSessionService.deleteSessionTrack(sessionId, trackId);
         return { message: 'Track deleted' };
+    }
+
+    @UseGuards(Guard)
+    @Delete(':id')
+    async endLiveSession(@Param('id') sessionId: string, @Req() req: any) {
+        const session = await this.liveSessionService.getSessionById(sessionId);
+        if (!session) {
+            throw new NotFoundException('Live session not found');
+        }
+        if (session.hostUserId !== req.userId) {
+            throw new ForbiddenException('Only the host can end this session');
+        }
+        await this.liveSessionService.endLiveSession(sessionId);
+        return { message: 'Live session ended' };
     }
 }

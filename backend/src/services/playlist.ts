@@ -207,3 +207,17 @@ export async function searchPublicPlaylists(query: string) {
 		include: { owner: true },
 	});
 }
+
+export async function deletePlaylist(playlistId: string) {
+    await prisma.playlistTrack.deleteMany({
+        where: { playlistId: playlistId }
+    });
+    
+    await prisma.playlistCollaborator.deleteMany({
+        where: { playlistId: playlistId }
+    });
+
+    return await prisma.playlist.delete({
+        where: { id: playlistId }
+    });
+}

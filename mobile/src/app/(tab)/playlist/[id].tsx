@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Modal, TextInput, Switch, TouchableOpacity, Image, Platform, ScrollView, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Plus, Pencil, X, MoreVertical } from "lucide-react-native";
+import { ChevronLeft, Plus, Pencil, X, MoreVertical, Trash } from "lucide-react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { COLORS, FONTS } from "@/constants";
 import { useState, useCallback } from "react";
@@ -9,722 +9,828 @@ import { usePlayer } from "@/context/PlayerContext";
 import * as ImagePicker from "expo-image-picker";
 
 async function getToken() {
-	if (Platform.OS === "web") return localStorage.getItem("userToken");
-	return await SecureStore.getItemAsync("userToken");
+    if (Platform.OS === "web") return localStorage.getItem("userToken");
+    return await SecureStore.getItemAsync("userToken");
 }
 
 export default function Playlist() {
-	const { id } = useLocalSearchParams();
-	const router = useRouter();
-	const { playQueue } = usePlayer();
+    const { id } = useLocalSearchParams();
+    const router = useRouter();
+    const { playQueue } = usePlayer();
 
-	const [playlistName, setPlaylistName] = useState("");
-	const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
-	const [playlistImage, setPlaylistImage] = useState("");
-	const [playlistOwner, setPlaylistOwner] = useState("");
-	
-	const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-	const [editName, setEditName] = useState("");
-	const [editImage, setEditImage] = useState("");
-	const [editIsPublic, setEditIsPublic] = useState(true);
-	
-	const [isCollaborative, setIsCollaborative] = useState(false);
-	const [friendsList, setFriendsList] = useState<any[]>([]);
-	const [friendSearchQuery, setFriendSearchQuery] = useState("");
-	const [newCollaborators, setNewCollaborators] = useState<{id: string, username: string}[]>([]);
-	const [existingCollaborators, setExistingCollaborators] = useState<any[]>([]);
-	const [myUsername, setMyUsername] = useState("");
+    const [playlistName, setPlaylistName] = useState("");
+    const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
+    const [playlistImage, setPlaylistImage] = useState("");
+    const [playlistOwner, setPlaylistOwner] = useState("");
+    
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [isDeletePlaylistModalVisible, setIsDeletePlaylistModalVisible] = useState(false);
+    
+    const [editName, setEditName] = useState("");
+    const [editImage, setEditImage] = useState("");
+    const [editIsPublic, setEditIsPublic] = useState(true);
+    
+    const [isCollaborative, setIsCollaborative] = useState(false);
+    const [friendsList, setFriendsList] = useState<any[]>([]);
+    const [friendSearchQuery, setFriendSearchQuery] = useState("");
+    const [newCollaborators, setNewCollaborators] = useState<{id: string, username: string}[]>([]);
+    const [existingCollaborators, setExistingCollaborators] = useState<any[]>([]);
+    const [myUsername, setMyUsername] = useState("");
 
-	// États pour le menu compact et la suppression
-	const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
-	const [menuPosition, setMenuPosition] = useState({ top: 0, right: 40 });
-	const [isMenuVisible, setIsMenuVisible] = useState(false);
-	const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+    const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+    const [menuPosition, setMenuPosition] = useState({ top: 0, right: 40 });
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 
-	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+    const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
-	useFocusEffect(
-		useCallback(() => {
-			const fetchPlaylist = async () => {
-				try {
-					const token = await getToken();
-					if (!token) return;
+    useFocusEffect(
+        useCallback(() => {
+            const fetchPlaylist = async () => {
+                try {
+                    const token = await getToken();
+                    if (!token) return;
 
-					const profileRes = await fetch(`${apiUrl}/auth/profil`, { headers: { Authorization: `Bearer ${token}` } });
-					if (profileRes.ok) {
-						const profileData = await profileRes.json();
-						setMyUsername(profileData.username);
-					}
+                    const profileRes = await fetch(`${apiUrl}/auth/profil`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (profileRes.ok) {
+                        const profileData = await profileRes.json();
+                        setMyUsername(profileData.username);
+                    }
 
-					const friendsRes = await fetch(`${apiUrl}/friends/list`, { headers: { Authorization: `Bearer ${token}` } });
-					if (friendsRes.ok) {
-						setFriendsList(await friendsRes.json());
-					}
+                    const friendsRes = await fetch(`${apiUrl}/friends/list`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (friendsRes.ok) {
+                        setFriendsList(await friendsRes.json());
+                    }
 
-					const response = await fetch(`${apiUrl}/playlists/${id}`, {
-						method: "GET",
-						headers: { Authorization: `Bearer ${token}` },
-					});
+                    const response = await fetch(`${apiUrl}/playlists/${id}`, {
+                        method: "GET",
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
 
-					const data = await response.json();
-					setPlaylistName(data.name);
-					setPlaylistImage(data.imageUrl);
-					setPlaylistOwner(data.owner?.username || "");
-					setIsCollaborative(data.collaborators && data.collaborators.length > 0);
-					setExistingCollaborators(data.collaborators || []);
-					setEditIsPublic(data.isPublic);
-					
-					if (data.tracks) {
-						setPlaylistTracks(data.tracks);
-					}
-				} catch (error) {
-					console.error(error);
-				}
-			};
+                    const data = await response.json();
+                    setPlaylistName(data.name);
+                    setPlaylistImage(data.imageUrl);
+                    setPlaylistOwner(data.owner?.username || "");
+                    setIsCollaborative(data.collaborators && data.collaborators.length > 0);
+                    setExistingCollaborators(data.collaborators || []);
+                    setEditIsPublic(data.isPublic);
 
-			fetchPlaylist();
-		}, [id])
-	);
+                    if (data.tracks) {
+                        setPlaylistTracks(data.tracks);
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
+            };
 
-	const handleSave = async () => {
-		try {
-			const token = await getToken();
-			const response = await fetch(`${apiUrl}/playlists/${id}`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ name: editName, imageUrl: editImage, isPublic: editIsPublic }),
-			});
+            fetchPlaylist();
+        }, [id])
+    );
 
-			if (response.ok) {
-				setPlaylistName(editName);
-				setPlaylistImage(editImage);
+    const handleSave = async () => {
+        try {
+            const token = await getToken();
+            const response = await fetch(`${apiUrl}/playlists/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ name: editName, imageUrl: editImage, isPublic: editIsPublic }),
+            });
 
-				if (isCollaborative && newCollaborators.length > 0) {
-					for (const friend of newCollaborators) {
-						await fetch(`${apiUrl}/playlists/${id}/collaborators`, {
-							method: "POST",
-							headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-							body: JSON.stringify({ userId: friend.id }),
-						});
-					}
-				}
-				setIsEditModalVisible(false);
-				setNewCollaborators([]);
-				setFriendSearchQuery("");
-			}
-		} catch (error) {
-			console.error(error);
-		}
-	};
+            if (response.ok) {
+                setPlaylistName(editName);
+                setPlaylistImage(editImage);
 
-	const confirmDeleteTrack = async () => {
-		if (!selectedTrackId) return;
-		
-		try {
-			const token = await getToken();
-			await fetch(`${apiUrl}/playlists/${id}/tracks/${selectedTrackId}`, {
-				method: "DELETE",
-				headers: { Authorization: `Bearer ${token}` }
-			});
-			setPlaylistTracks(prev => prev.filter(t => t.id !== selectedTrackId));
-			setIsDeleteModalVisible(false);
-			setSelectedTrackId(null);
-		} catch (err) {
-			console.error("Delete track error:", err);
-		}
-	};
+                if (isCollaborative && newCollaborators.length > 0) {
+                    for (const friend of newCollaborators) {
+                        await fetch(`${apiUrl}/playlists/${id}/collaborators`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ userId: friend.id }),
+                        });
+                    }
+                }
 
-	const pickImage = async () => {
-		const result = await ImagePicker.launchImageLibraryAsync({
-			mediaTypes: ["images"],
-			quality: 0.8,
-			allowsEditing: true,
-			aspect: [1, 1],
-		});
-		if (!result.canceled) {
-			setEditImage(result.assets[0].uri);
-		}
-	};
+                setIsEditModalVisible(false);
+                setNewCollaborators([]);
+                setFriendSearchQuery("");
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
-	const openMenuForTrack = (trackId: string, event: any) => {
-		event.target.measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
-			setMenuPosition({ top: py + height, right: 30 });
-			setSelectedTrackId(trackId);
-			setIsMenuVisible(true);
-		});
-	};
+    const handleDeletePlaylist = async () => {
+        try {
+            const token = await getToken();
+            const response = await fetch(`${apiUrl}/playlists/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-	const filteredFriends = friendSearchQuery.trim() === "" 
-		? [] 
-		: friendsList.filter((friend: any) => {
-			const friendUser = friend.sender?.username === myUsername ? friend.receiver : friend.sender;
-			return friendUser?.username?.toLowerCase().includes(friendSearchQuery.toLowerCase());
-		});
+            if (response.ok) {
+                setIsDeletePlaylistModalVisible(false);
+                router.replace("/library");
+            } else {
+                const err = await response.json();
+                alert(`Erreur: ${err.message}`);
+            }
+        } catch (err) {
+            console.error("Delete playlist error:", err);
+            alert("Erreur de connexion.");
+        }
+    };
 
-	const isOwner = playlistOwner === myUsername;
-	const isMusicRoomPlaylist = playlistOwner === "Music-Room";
-	const canAddTitles = isMusicRoomPlaylist ? false : (editIsPublic || isOwner || isCollaborative);
-	return (
-		<SafeAreaView style={styles.safeArea}>
-			<View style={styles.container}>
-				<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-					<View style={styles.header}>
-						<TouchableOpacity onPress={() => router.push("/library")} style={styles.backButton}>
-							<ChevronLeft size={28} color={COLORS.textPrimary} />
-						</TouchableOpacity>
-					</View>
+    const confirmDeleteTrack = async () => {
+        if (!selectedTrackId) return;
+        try {
+            const token = await getToken();
+            await fetch(`${apiUrl}/playlists/${id}/tracks/${selectedTrackId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-					<View style={styles.playlistInfo}>
-						<Image 
-							source={{ uri: playlistImage || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png" }} 
-							style={styles.cover} 
-						/>
-						<View style={styles.playlistDetails}>
-							<Text style={styles.playlistTitle}>{playlistName}</Text>
-							<Text style={styles.playlistAuthor}>{isCollaborative ? "Collaborative playlist by" : "Playlist by"} {playlistOwner}</Text>
-						</View>
-					</View>
+            setPlaylistTracks(prev => prev.filter(t => t.id !== selectedTrackId));
+            setIsDeleteModalVisible(false);
+            setSelectedTrackId(null);
+        } catch (err) {
+            console.error("Delete track error:", err);
+        }
+    };
 
-					<View style={styles.buttonsContainer}>
-						{isOwner && (
-							<TouchableOpacity style={styles.infoButton} onPress={() => {
-								setEditName(playlistName);
-								setEditImage(playlistImage);
-								setIsEditModalVisible(true);
-							}}>
-								<Pencil size={16} color="#E7A500"/>
-								<Text style={styles.infoButtonText}> Edit informations </Text>
-							</TouchableOpacity>
-						)}
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ["images"],
+            quality: 0.8,
+            allowsEditing: true,
+            aspect: [1, 1],
+        });
 
-						{canAddTitles && playlistTracks.length > 0 && (
-							<TouchableOpacity style={styles.infoButton} onPress={() => {
-								router.push(`/playlist/search?id=${id}`)}}>
-								<Plus size={18} color="#E7A500"/>
-								<Text style={styles.infoButtonText}> Add titles </Text>
-							</TouchableOpacity>
-						)}
-					</View>
+        if (!result.canceled) {
+            setEditImage(result.assets[0].uri);
+        }
+    };
 
-					<View style={styles.divider} />
+    const filteredFriends = friendSearchQuery.trim() === "" 
+        ? [] 
+        : friendsList.filter((friend: any) => {
+            const friendUser = friend.sender?.username === myUsername ? friend.receiver : friend.sender;
+            return friendUser?.username?.toLowerCase().includes(friendSearchQuery.toLowerCase());
+        });
 
-					{playlistTracks.map((track, index) => (
-						<View key={track.id} style={styles.trackItemContainer}>
-							<TouchableOpacity style={styles.trackItem} onPress={() => playQueue(playlistTracks, index)}>
-								<Image source={{ uri: track.thumbnail }} style={styles.trackImage} />
-								<View style={styles.trackInfo}>
-									<Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
-									<Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
-									<Text style={{ fontSize: 11, color: "#8A8A8A" }} numberOfLines={1}>
-										{isCollaborative && track.addedBy?.username ? `added by ${track.addedBy.username}` : ""}
-									</Text>
-								</View>
-							</TouchableOpacity>
-							
-							{canAddTitles && (
-								<TouchableOpacity 
-									ref={(ref) => { track._ref = ref; }}
-									onPress={(e) => {
-										setSelectedTrackId(track.id);
-										setIsMenuVisible(true);
-									}}
-									style={styles.moreOptionsBtn}
-								>
-									<MoreVertical size={20} color={COLORS.textMuted} />
-								</TouchableOpacity>
-							)}
-						</View>
-					))}
+    const isOwner = playlistOwner === myUsername;
+    const isMusicRoomPlaylist = playlistOwner === "Music-Room";
+    const canAddTitles = isMusicRoomPlaylist ? false : (editIsPublic || isOwner || isCollaborative);
 
-					{playlistTracks.length === 0 && (
-						<View style={styles.emptyState}>
-							<Text style={styles.emptyText}> No titles yet </Text>
-						</View>
-					)}
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.container}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => router.push("/library")} style={styles.backButton}>
+                            <ChevronLeft size={28} color={COLORS.textPrimary} />
+                        </TouchableOpacity>
+                    </View>
 
-					{canAddTitles && playlistTracks.length === 0 && (
-						<TouchableOpacity style={styles.addTitlesButton} onPress={() => router.push(`/playlist/search?id=${id}`)}>
-							<Text style={styles.addTitlesText}> Add new titles </Text>
-						</TouchableOpacity>
-					)}
-				</ScrollView>
-			</View>
+                    <View style={styles.playlistInfo}>
+                        <Image 
+                            source={{ uri: playlistImage || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png" }} 
+                            style={styles.cover} 
+                        />
+                        <View style={styles.playlistDetails}>
+                            <Text style={styles.playlistTitle}>{playlistName}</Text>
+                            <Text style={styles.playlistAuthor}>{isCollaborative ? "Collaborative playlist by" : "Playlist by"} {playlistOwner}</Text>
+                        </View>
+                    </View>
 
-			{/* Vrai menu contextuel compact (flottant) */}
-			<Modal visible={isMenuVisible} animationType="fade" transparent onRequestClose={() => setIsMenuVisible(false)}>
-				<TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
-					<View style={styles.compactMenu}>
-						<TouchableOpacity 
-							style={styles.menuItem} 
-							onPress={() => {
-								setIsMenuVisible(false);
-								setIsDeleteModalVisible(true);
-							}}
-						>
-							<Text style={styles.menuItemText}>Retirer de la playlist</Text>
-						</TouchableOpacity>
-					</View>
-				</TouchableOpacity>
-			</Modal>
+                    <View style={styles.buttonsContainer}>
+                        {isOwner && (
+                            <TouchableOpacity style={styles.infoButton} onPress={() => {
+                                setEditName(playlistName);
+                                setEditImage(playlistImage);
+                                setIsEditModalVisible(true);
+                            }}>
+                                <Pencil size={16} color="#E7A500"/>
+                                <Text style={styles.infoButtonText}> Edit informations </Text>
+                            </TouchableOpacity>
+                        )}
 
-			<Modal visible={isDeleteModalVisible} animationType="fade" transparent onRequestClose={() => setIsDeleteModalVisible(false)}>
-				<View style={styles.modalOverlay}>
-					<View style={styles.compactModalContent}>
-						<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-							<Text style={[styles.modalTitle, { marginBottom: 0 }]}>Retirer le titre</Text>
-							<TouchableOpacity onPress={() => setIsDeleteModalVisible(false)}>
-								<X size={20} color={COLORS.textMuted} />
-							</TouchableOpacity>
-						</View>
-						<Text style={styles.modalTitle}>Retirer le titre</Text>
-						<Text style={styles.modalText}>Voulez-vous vraiment retirer ce titre de la playlist ?</Text>
-						
-						<View style={styles.modalButtons}>
-							<TouchableOpacity style={styles.cancelButton} onPress={() => setIsDeleteModalVisible(false)}>
-								<Text style={styles.cancelButtonText}>Annuler</Text>
-							</TouchableOpacity>
-							<TouchableOpacity style={styles.deleteButton} onPress={confirmDeleteTrack}>
-								<Text style={styles.saveButtonText}>Supprimer</Text>
-							</TouchableOpacity>
-						</View>
-					</View>
-				</View>
-			</Modal>
+                        {canAddTitles && playlistTracks.length > 0 && (
+                            <TouchableOpacity style={styles.infoButton} onPress={() => {
+                                router.push(`/playlist/search?id=${id}`)}}>
+                                <Plus size={18} color="#E7A500"/>
+                                <Text style={styles.infoButtonText}> Add titles </Text>
+                            </TouchableOpacity>
+                        )}
 
-			{/* Modale d'édition de la playlist */}
-			<Modal visible={isEditModalVisible} animationType="fade" transparent onRequestClose={() => setIsEditModalVisible(false)}>
-				<View style={styles.modalOverlay}>
-					<View style={styles.modalContent}>
-						<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-							<Text style={[styles.modalTitle, { marginBottom: 0 }]}> Edit playlist </Text>
-							<TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
-								<X size={24} color={COLORS.textPrimary} />
-							</TouchableOpacity>
-						</View>
-						<Text style={styles.modalTitle}> Edit playlist </Text>
+                        {isOwner && (
+                            <TouchableOpacity style={[styles.infoButton, { backgroundColor: '#FFD1D1' }]} onPress={() => setIsDeletePlaylistModalVisible(true)}>
+                                <Trash size={16} color="red"/>
+                                <Text style={[styles.infoButtonText, { color: 'red' }]}> Delete </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
-						<View style={styles.editHeader}>
-							<TouchableOpacity style={styles.coverPicker} onPress={pickImage} activeOpacity={0.8}>
-								<Image source={{ uri: editImage || playlistImage || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png" }} style={styles.coverPickerImage} />
-								<View style={styles.coverOverlay}>
-									<Pencil size={20} color="#FFFFFF" />
-								</View>
-							</TouchableOpacity>
-							<View style={styles.editInfos}>
-								<TextInput
-									value={editName}
-									onChangeText={setEditName}
-									placeholder="Playlist name"
-									placeholderTextColor={COLORS.textMuted}
-									style={styles.playlistNameInput}
-									maxLength={15}
-								/>
-								<View style={styles.publicRow}>
-									<Text style={styles.publicText}> Public playlist </Text>
-									<Switch value={editIsPublic} onValueChange={setEditIsPublic} />
-								</View>
-							</View>
-						</View>
+                    <View style={styles.divider} />
 
-						{isCollaborative && (
-							<View style={styles.friendsSection}>
-								<Text style={styles.friendsSectionTitle}>
-									Add new collaborators
-								</Text>
+                    {playlistTracks.map((track, index) => (
+                        <View key={track.id} style={styles.trackItemContainer}>
+                            <TouchableOpacity style={styles.trackItem} onPress={() => playQueue(playlistTracks, index)}>
+                                <Image source={{ uri: track.thumbnail }} style={styles.trackImage} />
+                                <View style={styles.trackInfo}>
+                                    <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
+                                    <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
+                                    <Text style={{ fontSize: 11, color: "#8A8A8A" }} numberOfLines={1}>
+                                        {isCollaborative && track.addedBy?.username ? `added by ${track.addedBy.username}` : ""}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
 
-								<View style={styles.friendsContainer}>
-									{newCollaborators.map((friend) => (
-										<View key={friend.id} style={styles.friendBadge}>
-											<Text style={styles.friendBadgeText}>{friend.username}</Text>
-											<TouchableOpacity onPress={() => setNewCollaborators(prev => prev.filter(f => f.id !== friend.id))}>
-												<X size={14} color="white" />
-											</TouchableOpacity>
-										</View>
-									))}
-								</View>
+                            {canAddTitles && (
+                                <TouchableOpacity 
+                                    onPress={() => {
+                                        setSelectedTrackId(track.id);
+                                        setIsMenuVisible(true);
+                                    }}
+                                    style={styles.moreOptionsBtn}
+                                >
+                                    <MoreVertical size={20} color={COLORS.textMuted} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    ))}
 
-								<TextInput 
-									value={friendSearchQuery} 
-									onChangeText={setFriendSearchQuery} 
-									placeholder="Search for a friend" 
-									placeholderTextColor={COLORS.textMuted}
-									autoCapitalize="none" 
-									style={styles.modalInput} 
-								/>
-								
-								{filteredFriends.map((friend: any) => {
-									const friendUser = friend.sender?.username === myUsername ? friend.receiver : friend.sender;
-									
-									if (existingCollaborators.some(collab => collab.userId === friendUser.id)) return null;
-									if (newCollaborators.some(f => f.id === friendUser.id)) return null;
+                    {playlistTracks.length === 0 && (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyText}> No titles yet </Text>
+                        </View>
+                    )}
 
-									return (
-										<TouchableOpacity 
-											key={friendUser.id} 
-											onPress={() => { 
-												setNewCollaborators(prev => [...prev, { id: friendUser.id, username: friendUser.username }]);
-												setFriendSearchQuery(""); 
-											}} 
-											style={styles.friendSelectBtn}
-										>
-											<Text style={styles.friendSelectBtnText}>{friendUser.username}</Text>
-										</TouchableOpacity>
-									);
-								})}
-							</View>
-						)}
+                    {canAddTitles && playlistTracks.length === 0 && (
+                        <TouchableOpacity style={styles.addTitlesButton} onPress={() => router.push(`/playlist/search?id=${id}`)}>
+                            <Text style={styles.addTitlesText}> Add new titles </Text>
+                        </TouchableOpacity>
+                    )}
+                </ScrollView>
+            </View>
 
-						<View style={styles.modalButtons}>
-							<TouchableOpacity style={styles.cancelButton} onPress={() => {
-								setIsEditModalVisible(false);
-								setNewCollaborators([]);
-								setFriendSearchQuery("");
-							}}>
-								<Text style={styles.cancelButtonText}> Cancel </Text>
-							</TouchableOpacity>
+            {/* Menu flottant */}
+            <Modal visible={isMenuVisible} animationType="fade" transparent onRequestClose={() => setIsMenuVisible(false)}>
+                <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setIsMenuVisible(false)}>
+                    <View style={styles.compactMenu}>
+                        <TouchableOpacity 
+                            style={styles.menuItem} 
+                            onPress={() => {
+                                setIsMenuVisible(false);
+                                setIsDeleteModalVisible(true);
+                            }}
+                        >
+                            <Text style={styles.menuItemText}>Retirer de la playlist</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
 
-							<TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-								<Text style={styles.saveButtonText}> Save </Text>
-							</TouchableOpacity>
-						</View>
-					</View>
-				</View>
-			</Modal>
-		</SafeAreaView>
-	);
+            {/* Modale de Suppression de Piste */}
+            <Modal visible={isDeleteModalVisible} animationType="fade" transparent onRequestClose={() => setIsDeleteModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.compactModalContent}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Retirer le titre</Text>
+                            <TouchableOpacity onPress={() => setIsDeleteModalVisible(false)}>
+                                <X size={20} color={COLORS.textMuted} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.modalText}>Voulez-vous vraiment retirer ce titre de la playlist ?</Text>
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={styles.cancelButton} onPress={() => setIsDeleteModalVisible(false)}>
+                                <Text style={styles.cancelButtonText}>Annuler</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.deleteButton} onPress={confirmDeleteTrack}>
+                                <Text style={styles.saveButtonText}>Supprimer</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modale de Suppression de la Playlist */}
+            <Modal visible={isDeletePlaylistModalVisible} animationType="fade" transparent onRequestClose={() => setIsDeletePlaylistModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.compactModalContent}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Delete playlist</Text>
+                            <TouchableOpacity onPress={() => setIsDeletePlaylistModalVisible(false)}>
+                                <X size={20} color={COLORS.textMuted} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.modalText}>Do you really want to delete this playlist? This action cannot be undone.</Text>
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={styles.cancelButton} onPress={() => setIsDeletePlaylistModalVisible(false)}>
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePlaylist}>
+                                <Text style={styles.saveButtonText}>Delete</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modale d'Édition de la Playlist */}
+            <Modal visible={isEditModalVisible} animationType="fade" transparent onRequestClose={() => setIsEditModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={[styles.modalTitle, { marginBottom: 0 }]}> Edit playlist </Text>
+                            <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+                                <X size={24} color={COLORS.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.editHeader}>
+                            <TouchableOpacity style={styles.coverPicker} onPress={pickImage} activeOpacity={0.8}>
+                                <Image source={{ uri: editImage || playlistImage || "https://blog.landr.com/wp-content/uploads/2017/07/how-to-get-on-a-playlist-feature.png" }} style={styles.coverPickerImage} />
+                                <View style={styles.coverOverlay}>
+                                    <Pencil size={20} color="#FFFFFF" />
+                                </View>
+                            </TouchableOpacity>
+
+                            <View style={styles.editInfos}>
+                                <TextInput
+                                    value={editName}
+                                    onChangeText={setEditName}
+                                    placeholder="Playlist name"
+                                    placeholderTextColor={COLORS.textMuted}
+                                    style={styles.playlistNameInput}
+                                    maxLength={15}
+                                />
+                                <View style={styles.publicRow}>
+                                    <Text style={styles.publicText}> Public playlist </Text>
+                                    <Switch value={editIsPublic} onValueChange={setEditIsPublic} />
+                                </View>
+                            </View>
+                        </View>
+
+                        {isCollaborative && (
+                            <View style={styles.friendsSection}>
+                                <Text style={styles.friendsSectionTitle}>
+                                    Add new collaborators
+                                </Text>
+                                <View style={styles.friendsContainer}>
+                                    {newCollaborators.map((friend) => (
+                                        <View key={friend.id} style={styles.friendBadge}>
+                                            <Text style={styles.friendBadgeText}>{friend.username}</Text>
+                                            <TouchableOpacity onPress={() => setNewCollaborators(prev => prev.filter(f => f.id !== friend.id))}>
+                                                <X size={14} color="white" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                </View>
+
+                                <TextInput 
+                                    value={friendSearchQuery} 
+                                    onChangeText={setFriendSearchQuery} 
+                                    placeholder="Search for a friend" 
+                                    placeholderTextColor={COLORS.textMuted}
+                                    autoCapitalize="none" 
+                                    style={styles.modalInput} 
+                                />
+                                
+                                {filteredFriends.map((friend: any) => {
+                                    const friendUser = friend.sender?.username === myUsername ? friend.receiver : friend.sender;
+                                    
+                                    if (existingCollaborators.some(collab => collab.userId === friendUser.id)) return null; 
+                                    if (newCollaborators.some(f => f.id === friendUser.id)) return null;
+
+                                    return (
+                                        <TouchableOpacity 
+                                            key={friendUser.id} 
+                                            onPress={() => { 
+                                                setNewCollaborators(prev => [...prev, { id: friendUser.id, username: friendUser.username }]);
+                                                setFriendSearchQuery(""); 
+                                            }} 
+                                            style={styles.friendSelectBtn}
+                                        >
+                                            <Text style={styles.friendSelectBtnText}>{friendUser.username}</Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        )}
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={styles.cancelButton} onPress={() => {
+                                setIsEditModalVisible(false);
+                                setNewCollaborators([]);
+                                setFriendSearchQuery("");
+                            }}>
+                                <Text style={styles.cancelButtonText}> Cancel </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                                <Text style={styles.saveButtonText}> Save </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-	safeArea: {
-		flex: 1,
-		backgroundColor: COLORS.background,
-	},
-	container: {
-		flex: 1,
-	},
-	scrollContent: {
-		paddingHorizontal: 24,
-		paddingBottom: 110,
-	},
-	header: {
-		height: 55,
-		justifyContent: "center",
-	},
-	backButton: {
-		width: 40,
-		height: 40,
-		justifyContent: "center",
-		alignItems: "flex-start",
-	},
-	playlistInfo: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginTop: 8,
-	},
-	cover: {
-		width: 92,
-		height: 96,
-		borderRadius: 5,
-		backgroundColor: "#929292",
-	},
-	playlistDetails: {
-		marginLeft: 28,
-		flex: 1,
-	},
-	playlistTitle: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 20,
-		color: COLORS.textPrimary,
-		marginBottom: 8,
-	},
-	playlistAuthor: {
-		fontFamily: FONTS.regular,
-		fontSize: 14,
-		color: COLORS.textPrimary,
-	},
-	buttonsContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 10,
-		marginTop: 12,
-	},
-	infoButton: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		alignSelf: "flex-start",
-		paddingHorizontal: 18,
-		paddingVertical: 7,
-		borderRadius: 20,
-		backgroundColor: "#FBEAC7",
-	},
-	infoButtonText: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 12,
-		color: "#E7A500",
-	},
-	divider: {
-		height: 1,
-		backgroundColor: "#E2E2E2",
-		marginTop: 8,
-		marginBottom: 20,
-	},
-	emptyState: {
-		alignItems: "center",
-		marginTop: 20,
-	},
-	emptyText: {
-		fontFamily: FONTS.regular,
-		fontSize: 14,
-		color: COLORS.textMuted,
-	},
-	addTitlesButton: {
-		height: 49,
-		borderRadius: 25,
-		backgroundColor: "#FBEAC7",
-		justifyContent: "center",
-		alignItems: "center",
-		marginTop: 26,
-		marginHorizontal: 50,
-	},
-	addTitlesText: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 14,
-		color: "#E7A500",
-	},
-	trackItemContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginBottom: 10,
-	},
-	trackItem: {
-		flex: 1,
-		flexDirection: "row",
-		alignItems: "center",
-		minHeight: 56,
-	},
-	trackImage: {
-		width: 56,
-		height: 56,
-		borderRadius: 5,
-	},
-	trackInfo: {
-		flex: 1,
-		marginLeft: 12,
-		paddingRight: 8,
-	},
-	trackTitle: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 14,
-		color: COLORS.textPrimary,
-		marginBottom: 3,
-	},
-	trackArtist: {
-		fontFamily: FONTS.regular,
-		fontSize: 13,
-		color: COLORS.textPrimary,
-	},
-	moreOptionsBtn: {
-		padding: 12,
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	menuBackdrop: {
-		flex: 1,
-		backgroundColor: "transparent",
-	},
-	compactMenu: {
-		position: "absolute",
-		right: 24,
-		top: 250, // Ajusté dynamiquement ou fixe selon les besoins
-		backgroundColor: "#FFFFFF",
-		borderRadius: 8,
-		paddingVertical: 4,
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.15,
-		shadowRadius: 6,
-		elevation: 4,
-		borderWidth: 1,
-		borderColor: "#EAEAEA",
-		minWidth: 180,
-	},
-	menuItem: {
-		paddingVertical: 12,
-		paddingHorizontal: 16,
-	},
-	menuItemText: {
-		fontFamily: FONTS.medium,
-		fontSize: 14,
-		color: "#FF3B30",
-	},
-	modalOverlay: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: "rgba(0,0,0,0.4)",
-		padding: 24,
-	},
-	compactModalContent: {
-		backgroundColor: COLORS.background,
-		borderRadius: 16,
-		padding: 20,
-		width: "100%",
-		maxWidth: 320,
-	},
-	modalContent: {
-		backgroundColor: COLORS.background,
-		borderRadius: 20,
-		padding: 20,
-		width: "100%",
-		maxHeight: "85%",
-	},
-	modalTitle: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 17,
-		color: COLORS.textPrimary,
-		marginBottom: 8,
-	},
-	modalText: {
-		fontFamily: FONTS.regular,
-		fontSize: 14,
-		color: COLORS.textDescription,
-		marginBottom: 20,
-		lineHeight: 20,
-	},
-	modalInput: {
-		height: 48,
-		borderRadius: 12,
-		backgroundColor: "#F5F5F5",
-		paddingHorizontal: 16,
-		color: COLORS.textPrimary,
-		fontFamily: FONTS.regular,
-	},
-	modalButtons: {
-		flexDirection: "row",
-		gap: 10,
-	},
-	cancelButton: {
-		flex: 1,
-		height: 40,
-		borderRadius: 20,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: "#EAEAEA",
-	},
-	saveButton: {
-		flex: 1,
-		height: 40,
-		borderRadius: 20,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: COLORS.primary,
-	},
-	deleteButton: {
-		flex: 1,
-		height: 40,
-		borderRadius: 20,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: "red",
-	},
-	cancelButtonText: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 13,
-		color: COLORS.textPrimary,
-	},
-	saveButtonText: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 13,
-		color: COLORS.white,
-	},
-	editHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginBottom: 24,
-	},
-	coverPicker: {
-		position: "relative",
-	},
-	coverPickerImage: {
-		width: 90,
-		height: 90,
-		borderRadius: 10,
-		opacity: 0.75,
-	},
-	coverOverlay: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		borderRadius: 10,
-		backgroundColor: "rgba(0,0,0,0.35)",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	editInfos: {
-		flex: 1,
-		marginLeft: 18,
-	},
-	playlistNameInput: {
-		fontFamily: FONTS.semiBold,
-		fontSize: 18,
-		color: COLORS.textPrimary,
-		borderBottomWidth: 1,
-		borderBottomColor: "#E5E5E5",
-		paddingBottom: 8,
-	},
-	publicRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		marginTop: 16,
-	},
-	publicText: {
-		fontFamily: FONTS.medium,
-		fontSize: 14,
-		color: COLORS.textPrimary,
-	},
-	friendsSection: {
-		marginTop: 10,
-		marginBottom: 10,
-	},
-	friendsSectionTitle: {
-		fontFamily: FONTS.medium,
-		fontSize: 14,
-		color: COLORS.textPrimary,
-		marginBottom: 12,
-	},
-	friendsContainer: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		gap: 8,
-		marginBottom: 12,
-	},
-	friendBadge: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: COLORS.primary,
-		paddingHorizontal: 12,
-		paddingVertical: 6,
-		borderRadius: 16,
-	},
-	friendBadgeText: {
-		color: 'white',
-		marginRight: 6,
-		fontFamily: FONTS.medium,
-	},
-	friendSelectBtn: {
-		paddingVertical: 10,
-		paddingHorizontal: 12,
-		borderRadius: 8,
-		marginBottom: 6,
-		backgroundColor: "#f5f5f5",
-		marginTop: 8,
-	},
-	friendSelectBtnText: {
-		fontFamily: FONTS.regular,
-		color: COLORS.textPrimary,
-	},
+    safeArea: {
+        flex: 1,
+        backgroundColor: COLORS.background,
+    },
+
+    container: {
+        flex: 1,
+    },
+
+    scrollContent: {
+        paddingHorizontal: 24,
+        paddingBottom: 110,
+    },
+
+    header: {
+        height: 55,
+        justifyContent: "center",
+    },
+
+    backButton: {
+        width: 40,
+        height: 40,
+        justifyContent: "center",
+        alignItems: "flex-start",
+    },
+
+    playlistInfo: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 8,
+    },
+
+    cover: {
+        width: 92,
+        height: 96,
+        borderRadius: 5,
+        backgroundColor: "#929292",
+    },
+
+    playlistDetails: {
+        marginLeft: 28,
+        flex: 1,
+    },
+
+    playlistTitle: {
+        fontFamily: FONTS.semiBold,
+        fontSize: 20,
+        color: COLORS.textPrimary,
+        marginBottom: 8,
+    },
+
+    playlistAuthor: {
+        fontFamily: FONTS.regular,
+        fontSize: 14,
+        color: COLORS.textPrimary,
+    },
+
+    buttonsContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 10,
+        marginTop: 12,
+    },
+
+    infoButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        alignSelf: "flex-start",
+        paddingHorizontal: 18,
+        paddingVertical: 7,
+        borderRadius: 20,
+        backgroundColor: "#FBEAC7",
+    },
+
+    infoButtonText: {
+        fontFamily: FONTS.semiBold,
+        fontSize: 12,
+        color: "#E7A500",
+    },
+
+    divider: {
+        height: 1,
+        backgroundColor: "#E2E2E2",
+        marginTop: 8,
+        marginBottom: 20,
+    },
+
+    emptyState: {
+        alignItems: "center",
+        marginTop: 20,
+    },
+
+    emptyText: {
+        fontFamily: FONTS.regular,
+        fontSize: 14,
+        color: COLORS.textMuted,
+    },
+
+    addTitlesButton: {
+        height: 49,
+        borderRadius: 25,
+        backgroundColor: "#FBEAC7",
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 26,
+        marginHorizontal: 50,
+    },
+
+    addTitlesText: {
+        fontFamily: FONTS.semiBold,
+        fontSize: 14,
+        color: "#E7A500",
+    },
+
+    trackItemContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 10,
+    },
+
+    trackItem: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        minHeight: 56,
+    },
+
+    trackImage: {
+        width: 56,
+        height: 56,
+        borderRadius: 5,
+    },
+
+    trackInfo: {
+        flex: 1,
+        marginLeft: 12,
+        paddingRight: 8,
+    },
+
+    trackTitle: {
+        fontFamily: FONTS.semiBold,
+        fontSize: 14,
+        color: COLORS.textPrimary,
+        marginBottom: 3,
+    },
+
+    trackArtist: {
+        fontFamily: FONTS.regular,
+        fontSize: 13,
+        color: COLORS.textPrimary,
+    },
+
+    moreOptionsBtn: {
+        padding: 12,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    menuBackdrop: {
+        flex: 1,
+        backgroundColor: "transparent",
+    },
+
+    compactMenu: {
+        position: "absolute",
+        right: 24,
+        top: 250,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 8,
+        paddingVertical: 4,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: "#EAEAEA",
+        minWidth: 180,
+    },
+
+    menuItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+    },
+
+    menuItemText: {
+        fontFamily: FONTS.medium,
+        fontSize: 14,
+        color: "#FF3B30",
+    },
+
+    modalOverlay: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "rgba(0,0,0,0.4)",
+        padding: 24,
+    },
+
+    compactModalContent: {
+        backgroundColor: COLORS.background,
+        borderRadius: 16,
+        padding: 20,
+        width: "100%",
+        maxWidth: 320,
+    },
+
+    modalContent: {
+        backgroundColor: COLORS.background,
+        borderRadius: 20,
+        padding: 20,
+        width: "100%",
+        maxHeight: "85%",
+    },
+
+    modalTitle: {
+        fontFamily: FONTS.semiBold,
+        fontSize: 17,
+        color: COLORS.textPrimary,
+        marginBottom: 8,
+    },
+
+    modalText: {
+        fontFamily: FONTS.regular,
+        fontSize: 14,
+        color: COLORS.textDescription,
+        marginBottom: 20,
+        lineHeight: 20,
+    },
+
+    modalInput: {
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: "#F5F5F5",
+        paddingHorizontal: 16,
+        color: COLORS.textPrimary,
+        fontFamily: FONTS.regular,
+        marginBottom: 16,
+    },
+
+    modalButtons: {
+        flexDirection: "row",
+        gap: 10,
+    },
+
+    cancelButton: {
+        flex: 1,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#EAEAEA",
+    },
+
+    saveButton: {
+        flex: 1,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: COLORS.primary,
+    },
+
+    deleteButton: {
+        flex: 1,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "red",
+    },
+
+    cancelButtonText: {
+        fontFamily: FONTS.semiBold,
+        fontSize: 13,
+        color: COLORS.textPrimary,
+    },
+
+    saveButtonText: {
+        fontFamily: FONTS.semiBold,
+        fontSize: 13,
+        color: COLORS.white,
+    },
+
+    editHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 24,
+    },
+
+    coverPicker: {
+        position: "relative",
+    },
+
+    coverPickerImage: {
+        width: 90,
+        height: 90,
+        borderRadius: 10,
+        opacity: 0.75,
+    },
+
+    coverOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        borderRadius: 10,
+        backgroundColor: "rgba(0,0,0,0.35)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    editInfos: {
+        flex: 1,
+        marginLeft: 18,
+    },
+
+    playlistNameInput: {
+        fontFamily: FONTS.semiBold,
+        fontSize: 18,
+        color: COLORS.textPrimary,
+        borderBottomWidth: 1,
+        borderBottomColor: "#E5E5E5",
+        paddingBottom: 8,
+    },
+
+    publicRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginTop: 16,
+    },
+
+    publicText: {
+        fontFamily: FONTS.medium,
+        fontSize: 14,
+        color: COLORS.textPrimary,
+    },
+
+    friendsSection: {
+        marginTop: 10,
+        marginBottom: 10,
+    },
+
+    friendsSectionTitle: {
+        fontFamily: FONTS.medium,
+        fontSize: 14,
+        color: COLORS.textPrimary,
+        marginBottom: 12,
+    },
+
+    friendsContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+        marginBottom: 12,
+    },
+
+    friendBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+
+    friendBadgeText: {
+        color: "white",
+        marginRight: 6,
+        fontFamily: FONTS.medium,
+    },
+
+    friendSelectBtn: {
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        marginBottom: 6,
+        backgroundColor: "#f5f5f5",
+        marginTop: 8,
+    },
+
+    friendSelectBtnText: {
+        fontFamily: FONTS.regular,
+        color: COLORS.textPrimary,
+    },
 });
