@@ -79,6 +79,8 @@ export class LiveSessionController {
             body.sessionId,
             body.trackId,
             request.userId,
+            body.latitude, // Ajout de la latitude
+            body.longitude // Ajout de la longitude
         );
     }
 
@@ -110,13 +112,19 @@ export class LiveSessionController {
         @Param('id') sessionId: string,
         @Body('title') title: string,
         @Body('artist') artist: string,
-        @Body('sourceId') sourceId: string
+        @Body('sourceId') sourceId: string,
+        @Body('latitude') latitude: number,
+        @Body('longitude') longitude: number,
+        @Req() request: any
     ) {
         return await this.liveSessionService.addTrackToLiveSession(
-            sessionId, 
+            sessionId,
+            request.userId,
             title, 
             artist, 
-            sourceId
+            sourceId,
+            latitude,
+            longitude
         );
     }
 

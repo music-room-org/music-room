@@ -34,17 +34,19 @@ export default function Library() {
     const [isCollabMode, setIsCollabMode] = useState(false);
     const [isLiveMode, setIsLiveMode] = useState(false);
     const [isPublic, setIsPublic] = useState(true);
-    const [license, setLicense] = useState('OPEN'); 
+    const [license, setLicense] = useState('OPEN');
 
     // Recherche et Coordonnées GPS
     const [addressQuery, setAddressQuery] = useState("");
     const [location, setLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
     
-    // Heures
+    // Heures ET Dates
     const [startTime, setStartTime] = useState(new Date());
     const [endTime, setEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
-    const [showStartPicker, setShowStartPicker] = useState(false);
-    const [showEndPicker, setShowEndPicker] = useState(false);
+    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+    const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+    const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
     const geocodeAddress = async () => {
         if (!addressQuery.trim()) return;
@@ -108,6 +110,7 @@ export default function Library() {
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ name: newPlaylistName }),
             });
+
             const newPlaylist = await response.json();
 
             if (isCollabMode && selectedFriends.length > 0) {
@@ -138,7 +141,6 @@ export default function Library() {
                     if (!token) return;
 
                     let currentUserId = myUserId;
-
                     const profileRes = await fetch(`${apiUrl}/auth/profil`, {
                         method: "GET",
                         headers: { Authorization: `Bearer ${token}` }
@@ -147,13 +149,14 @@ export default function Library() {
                         const profileData = await profileRes.json();
                         setMyUsername(profileData.username);
                         setMyUserId(profileData.id);
-                        currentUserId = profileData.id; // Assure que le filtre en dessous a le bon ID
+                        currentUserId = profileData.id;
                     }
 
                     const playlistRes = await fetch(`${apiUrl}/playlists/mine`, {
                         method: "GET",
                         headers: { Authorization: `Bearer ${token}` },
                     });
+
                     if (playlistRes.ok) {
                         const pData = await playlistRes.json();
                         setMyPlaylists(Array.isArray(pData) ? pData : []);
@@ -165,6 +168,7 @@ export default function Library() {
                         method: "GET",
                         headers: { Authorization: `Bearer ${token}` },
                     });
+
                     if (liveRes.ok) {
                         const allLives = await liveRes.json();
                         if (Array.isArray(allLives)) {
@@ -249,14 +253,22 @@ export default function Library() {
             <Modal visible={isTypeMenuVisible} transparent={true} animationType="slide" onRequestClose={() => setIsTypeMenuVisible(false)}>
                 <View style={styles.typeMenuOverlay}>
                     <View style={styles.typeMenu}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
+                            <TouchableOpacity onPress={() => setIsTypeMenuVisible(false)}>
+                                <X size={24} color={COLORS.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+                        
                         <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
                             <List size={24} color={COLORS.textPrimary} />
                             <Text style={styles.typeMenuText}> Playlist classique </Text>
                         </TouchableOpacity>
+
                         <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(true); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
                             <User size={24} color={COLORS.textPrimary} />
                             <Text style={styles.typeMenuText}> Playlist collaborative </Text>
                         </TouchableOpacity>
+                        
                         <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(true); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
                             <Radio size={24} color={COLORS.primary} />
                             <Text style={[styles.typeMenuText, { color: COLORS.primary }]}> Live Session Event </Text>
@@ -268,12 +280,25 @@ export default function Library() {
             <Modal visible={isCreateModalVisible} transparent={true} animationType="fade">
                 <View style={styles.modalBackdrop}>
                     <View style={styles.modalBox}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 16 }}>
+                            <TouchableOpacity onPress={() => {
+                                setIsCreateModalVisible(false);
+                                setNewPlaylistName("");
+                                setFriendSearchQuery("");
+                                setSelectedFriends([]);
+                                setAddressQuery("");
+                                setIsLiveMode(false);
+                            }}>
+                                <X size={24} color={COLORS.textMuted} />
+                            </TouchableOpacity>
+                        </View>
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <TextInput 
                                 value={newPlaylistName} 
                                 onChangeText={setNewPlaylistName} 
                                 placeholder={isLiveMode ? "Event Name" : "Playlist name"} 
                                 style={styles.modalInput} 
+                                maxLength={15}
                             />
 
                             {isLiveMode && (
@@ -332,35 +357,84 @@ export default function Library() {
                                                 </MapView>
                                             </View>
 
-                                            <Text style={styles.inputLabel}>Créneau de l'événement</Text>
+                                            <Text style={styles.inputLabel}>Début de l'événement</Text>
                                             <View style={styles.timeRow}>
-                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartPicker(true)}>
-                                                    <Text style={styles.timeBtnText}>Début: {startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartDatePicker(true)}>
+                                                    <Text style={styles.timeBtnText}>{startTime.toLocaleDateString()}</Text>
                                                 </TouchableOpacity>
-                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndPicker(true)}>
-                                                    <Text style={styles.timeBtnText}>Fin: {endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartTimePicker(true)}>
+                                                    <Text style={styles.timeBtnText}>{startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
                                                 </TouchableOpacity>
                                             </View>
 
-                                            {showStartPicker && (
+                                            <Text style={styles.inputLabel}>Fin de l'événement</Text>
+                                            <View style={styles.timeRow}>
+                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndDatePicker(true)}>
+                                                    <Text style={styles.timeBtnText}>{endTime.toLocaleDateString()}</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndTimePicker(true)}>
+                                                    <Text style={styles.timeBtnText}>{endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                                                </TouchableOpacity>
+                                            </View>
+
+                                            {showStartDatePicker && (
+                                                <DateTimePicker
+                                                    value={startTime}
+                                                    mode="date"
+                                                    display="default"
+                                                    onChange={(event, date) => {
+                                                        setShowStartDatePicker(false);
+                                                        if (date) {
+                                                            const newDate = new Date(startTime);
+                                                            newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+                                                            setStartTime(newDate);
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                            {showStartTimePicker && (
                                                 <DateTimePicker
                                                     value={startTime}
                                                     mode="time"
                                                     display="default"
                                                     onChange={(event, date) => {
-                                                        setShowStartPicker(false);
-                                                        if (date) setStartTime(date);
+                                                        setShowStartTimePicker(false);
+                                                        if (date) {
+                                                            const newDate = new Date(startTime);
+                                                            newDate.setHours(date.getHours(), date.getMinutes(), 0);
+                                                            setStartTime(newDate);
+                                                        }
                                                     }}
                                                 />
                                             )}
-                                            {showEndPicker && (
+
+                                            {showEndDatePicker && (
+                                                <DateTimePicker
+                                                    value={endTime}
+                                                    mode="date"
+                                                    display="default"
+                                                    onChange={(event, date) => {
+                                                        setShowEndDatePicker(false);
+                                                        if (date) {
+                                                            const newDate = new Date(endTime);
+                                                            newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+                                                            setEndTime(newDate);
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                            {showEndTimePicker && (
                                                 <DateTimePicker
                                                     value={endTime}
                                                     mode="time"
                                                     display="default"
                                                     onChange={(event, date) => {
-                                                        setShowEndPicker(false);
-                                                        if (date) setEndTime(date);
+                                                        setShowEndTimePicker(false);
+                                                        if (date) {
+                                                            const newDate = new Date(endTime);
+                                                            newDate.setHours(date.getHours(), date.getMinutes(), 0);
+                                                            setEndTime(newDate);
+                                                        }
                                                     }}
                                                 />
                                             )}
@@ -422,6 +496,7 @@ export default function Library() {
                                 }} style={styles.cancelBtn}>
                                     <Text style={styles.cancelBtnText}>Cancel</Text>
                                 </TouchableOpacity>
+
                                 <TouchableOpacity onPress={handleCreatePlaylist} style={styles.saveBtn}>
                                     <Text style={styles.saveBtnText}>Create</Text>
                                 </TouchableOpacity>

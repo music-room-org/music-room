@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, ScrollView, Image, ActivityIndicator, Modal, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ThumbsUp, Play, Plus, Search, Power, Pencil, X } from "lucide-react-native";
+import { ChevronLeft, ThumbsUp, Play, Plus, Search, Power, Pencil, X, MoreVertical } from "lucide-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { COLORS, FONTS, API_BASE_URL } from "@/constants";
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -20,8 +20,8 @@ export default function LiveSession() {
     const router = useRouter();
     const { playTrack } = usePlayer();
 
-    // Bloqueur d'actualisation pour éviter l'erreur 404 à la suppression
     const isClosing = useRef(false);
+    const shouldRedirectRef = useRef(false);
 
     const [sessionName, setSessionName] = useState("Loading Session...");
     const [tracks, setTracks] = useState<any[]>([]);
@@ -42,17 +42,33 @@ export default function LiveSession() {
     
     const [editAddressQuery, setEditAddressQuery] = useState("");
     const [editLocation, setEditLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
+    
     const [editStartTime, setEditStartTime] = useState(new Date());
     const [editEndTime, setEditEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
-    const [showStartPicker, setShowStartPicker] = useState(false);
-    const [showEndPicker, setShowEndPicker] = useState(false);
+    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+    const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+    const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
     const [newCollaborators, setNewCollaborators] = useState<{id: string, username: string}[]>([]);
     const [friendSearchQuery, setFriendSearchQuery] = useState("");
     const [friendsList, setFriendsList] = useState<any[]>([]);
     const [myUsername, setMyUsername] = useState("");
 
+    // Modales personnalisées pour remplacer les alerts
+    const [errorModalVisible, setErrorModalVisible] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+    const [trackToDelete, setTrackToDelete] = useState<string | null>(null);
+
     const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+
+    const showError = (msg: string, redirect = false) => {
+        shouldRedirectRef.current = redirect;
+        setErrorMessage(msg);
+        setErrorModalVisible(true);
+    };
 
     const fetchSession = useCallback(async () => {
         if (isClosing.current) return;
@@ -96,13 +112,11 @@ export default function LiveSession() {
                 }
             } else if (response.status === 404) {
                 isClosing.current = true;
-                alert("Cet événement est terminé.");
-                router.replace("/library");
+                showError("This event has finished.", true);
             } else {
                 isClosing.current = true;
                 const err = await response.json();
-                alert(`Erreur d'accès: ${err.message}`);
-                router.replace("/library");
+                showError(`Access error: ${err.message}`, true);
             }
         } catch (error) {
             console.error(error);
@@ -122,31 +136,58 @@ export default function LiveSession() {
             if (result.length > 0) {
                 setEditLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
             } else {
-                alert("Adresse introuvable");
+                showError("Cannot find address");
             }
         } catch (e) {
             console.error(e);
-            alert("Erreur lors de la recherche de l'adresse.");
+            showError("Error while searching for the address.");
         }
     };
 
     const handleVote = async (trackId: string) => {
         try {
+            let userLat: number | undefined;
+            let userLon: number | undefined;
+
+            // Seuls les invités doivent fournir leur localisation
+            if (license === 'LOCATION_TIME' && myUserId !== hostUserId) {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                
+                if (status !== 'granted') {
+                    showError("You have to accept GPS tracking to participate to this event.");
+                    return;
+                }
+
+                const location = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Highest
+                });
+                
+                userLat = location.coords.latitude;
+                userLon = location.coords.longitude;
+            }
+
             const token = await getToken();
             const response = await fetch(`${apiUrl}/live_session/vote`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ sessionId: id, trackId })
+                body: JSON.stringify({ 
+                    sessionId: id, 
+                    trackId,
+                    latitude: userLat,
+                    longitude: userLon
+                })
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: "Erreur inconnue" }));
-                alert(errorData.message || "Impossible de voter");
+                const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+                showError(errorData.message || "Impossible to vote");
                 return;
             }
+            
             fetchSession();
         } catch (err) {
             console.error(err);
+            showError("Error while retrieving GPS tracking or sending vote.");
         }
     };
 
@@ -161,7 +202,7 @@ export default function LiveSession() {
                 playTrack(nextTrackData.track);
                 fetchSession();
             } else {
-                alert("No tracks in queue!");
+                showError("No tracks in queue!");
             }
         } catch (err) {
             console.error(err);
@@ -185,6 +226,26 @@ export default function LiveSession() {
 
     const handleAddTrack = async (track: any) => {
         try {
+            let userLat: number | undefined;
+            let userLon: number | undefined;
+
+            // Seuls les invités doivent fournir leur localisation
+            if (license === 'LOCATION_TIME' && myUserId !== hostUserId) {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                
+                if (status !== 'granted') {
+                    showError("You have to accept GPS tracking to add a title to this event");
+                    return;
+                }
+
+                const location = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Highest
+                });
+                
+                userLat = location.coords.latitude;
+                userLon = location.coords.longitude;
+            }
+
             const token = await getToken();
             const response = await fetch(`${apiUrl}/live_session/${id}/tracks`, {
                 method: "POST",
@@ -192,20 +253,38 @@ export default function LiveSession() {
                 body: JSON.stringify({ 
                     title: track.title, 
                     artist: track.artist || "Unknown Artist", 
-                    sourceId: track.id 
+                    sourceId: track.id,
+                    latitude: userLat,
+                    longitude: userLon
                 })
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: "Erreur inconnue" }));
-                alert(`Le serveur a refusé l'ajout : ${errorData.message || response.status}`);
+                const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+                showError(`Cannot add : ${errorData.message || response.status}`);
                 return;
             }
             setSearchQuery("");
             setSearchResults([]);
             fetchSession();
         } catch (err) {
-            alert("Erreur de connexion au serveur backend.");
+            showError("Error connecting to the serveur or GPS tracking.");
+        }
+    };
+
+    const confirmDeleteTrack = async () => {
+        if (!trackToDelete) return;
+        try {
+            const token = await getToken();
+            await fetch(`${apiUrl}/live_session/${id}/tracks/${trackToDelete}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchSession();
+            setIsDeleteModalVisible(false);
+            setTrackToDelete(null);
+        } catch (err) {
+            console.error("Delete track error:", err);
         }
     };
 
@@ -234,7 +313,7 @@ export default function LiveSession() {
                 setEditAddressQuery("");
                 fetchSession();
             } else {
-                alert("Failed to update session");
+                showError("Failed to update session");
             }
         } catch (err) {
             console.error(err);
@@ -256,6 +335,8 @@ export default function LiveSession() {
     };
 
     const isOwner = hostUserId === myUserId;
+    const isInvited = invitedUsers.some(u => u.id === myUserId);
+    const canModifyTracks = isOwner || license === 'OPEN' || isInvited;
 
     const filteredFriends = friendSearchQuery.trim() === "" 
         ? [] 
@@ -298,23 +379,27 @@ export default function LiveSession() {
                     </View>
                 </View>
 
-                <View style={styles.actionBar}>
-                    <TouchableOpacity style={styles.playNextBtn} onPress={handleNextTrack}>
-                        <Play size={20} color="white" fill="white" />
-                        <Text style={styles.playNextText}>Play Next Track</Text>
-                    </TouchableOpacity>
-                </View>
+                {isOwner && (
+                    <View style={styles.actionBar}>
+                        <TouchableOpacity style={styles.playNextBtn} onPress={handleNextTrack}>
+                            <Play size={20} color="white" fill="white" />
+                            <Text style={styles.playNextText}>Play Next Track</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
-                <View style={styles.searchContainer}>
-                    <Search size={20} color={COLORS.textMuted} />
-                    <TextInput
-                        value={searchQuery}
-                        onChangeText={handleSearch}
-                        placeholder="Suggest a track for the Live Session..."
-                        placeholderTextColor={COLORS.textMuted}
-                        style={styles.searchInput}
-                    />
-                </View>
+                {canModifyTracks && (
+                    <View style={styles.searchContainer}>
+                        <Search size={20} color={COLORS.textMuted} />
+                        <TextInput
+                            value={searchQuery}
+                            onChangeText={handleSearch}
+                            placeholder="Suggest a track for the Live Session..."
+                            placeholderTextColor={COLORS.textMuted}
+                            style={styles.searchInput}
+                        />
+                    </View>
+                )}
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                     {searchQuery.length > 0 ? (
@@ -351,6 +436,18 @@ export default function LiveSession() {
                                         <ThumbsUp size={16} color="white" />
                                         <Text style={styles.voteText}>{item.votes?.length || 0}</Text>
                                     </TouchableOpacity>
+
+                                    {canModifyTracks && (
+                                        <TouchableOpacity 
+                                            onPress={() => {
+                                                setTrackToDelete(item.trackId);
+                                                setIsDeleteModalVisible(true);
+                                            }}
+                                            style={styles.moreOptionsBtn}
+                                        >
+                                            <MoreVertical size={20} color={COLORS.textMuted} />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             ))}
                             {tracks.length === 0 && (
@@ -361,18 +458,74 @@ export default function LiveSession() {
                 </ScrollView>
             </View>
 
+            {/* Modale d'Erreur */}
+            <Modal visible={errorModalVisible} animationType="fade" transparent onRequestClose={() => setErrorModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.compactModalContent}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Attention</Text>
+                            <TouchableOpacity onPress={() => {
+                                setErrorModalVisible(false);
+                                if (shouldRedirectRef.current) router.replace("/library");
+                            }}>
+                                <X size={20} color={COLORS.textMuted} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.modalText}>{errorMessage}</Text>
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={styles.saveButton} onPress={() => {
+                                setErrorModalVisible(false);
+                                if (shouldRedirectRef.current) router.replace("/library");
+                            }}>
+                                <Text style={styles.saveButtonText}>OK</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modale de Suppression */}
+            <Modal visible={isDeleteModalVisible} animationType="fade" transparent onRequestClose={() => setIsDeleteModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.compactModalContent}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Delete title</Text>
+                            <TouchableOpacity onPress={() => setIsDeleteModalVisible(false)}>
+                                <X size={20} color={COLORS.textMuted} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.modalText}>Do you really want to delete this title from the event ?</Text>
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={styles.cancelButton} onPress={() => setIsDeleteModalVisible(false)}>
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.deleteButton} onPress={confirmDeleteTrack}>
+                                <Text style={styles.saveButtonText}>Delete</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modale d'Édition */}
             <Modal visible={isEditModalVisible} animationType="fade" transparent onRequestClose={() => setIsEditModalVisible(false)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <Text style={styles.modalTitle}> Event Settings </Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={[styles.modalTitle, { marginBottom: 0 }]}> Event Settings </Text>
+                            <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+                                <X size={24} color={COLORS.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
 
+                        <ScrollView showsVerticalScrollIndicator={false}>
                             <TextInput
                                 value={editName}
                                 onChangeText={setEditName}
                                 placeholder="Event name"
                                 placeholderTextColor={COLORS.textMuted}
                                 style={styles.modalInput}
+                                maxLength={15}
                             />
 
                             <View style={styles.toggleRow}>
@@ -395,13 +548,13 @@ export default function LiveSession() {
 
                             {editLicense === 'LOCATION_TIME' && (
                                 <View style={styles.locTimeContainer}>
-                                    <Text style={styles.inputLabel}>Lieu de l'événement</Text>
+                                    <Text style={styles.inputLabel}>Place of event</Text>
                                     
                                     <View style={styles.addressSearchRow}>
                                         <TextInput 
                                             value={editAddressQuery}
                                             onChangeText={setEditAddressQuery}
-                                            placeholder="Ville, rue, adresse..."
+                                            placeholder="City, street, address..."
                                             placeholderTextColor={COLORS.textMuted}
                                             style={styles.addressInput}
                                             onSubmitEditing={geocodeEditAddress}
@@ -429,35 +582,84 @@ export default function LiveSession() {
                                         </MapView>
                                     </View>
 
-                                    <Text style={styles.inputLabel}>Créneau de l'événement</Text>
+                                    <Text style={styles.inputLabel}>Beginning of the event</Text>
                                     <View style={styles.timeRow}>
-                                        <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartPicker(true)}>
-                                            <Text style={styles.timeBtnText}>Début: {editStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                                        <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartDatePicker(true)}>
+                                            <Text style={styles.timeBtnText}>{editStartTime.toLocaleDateString()}</Text>
                                         </TouchableOpacity>
-                                        <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndPicker(true)}>
-                                            <Text style={styles.timeBtnText}>Fin: {editEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                                        <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartTimePicker(true)}>
+                                            <Text style={styles.timeBtnText}>{editStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
                                         </TouchableOpacity>
                                     </View>
 
-                                    {showStartPicker && (
+                                    <Text style={styles.inputLabel}>End of the event</Text>
+                                    <View style={styles.timeRow}>
+                                        <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndDatePicker(true)}>
+                                            <Text style={styles.timeBtnText}>{editEndTime.toLocaleDateString()}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndTimePicker(true)}>
+                                            <Text style={styles.timeBtnText}>{editEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {showStartDatePicker && (
+                                        <DateTimePicker
+                                            value={editStartTime}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(event, date) => {
+                                                setShowStartDatePicker(false);
+                                                if (date) {
+                                                    const newDate = new Date(editStartTime);
+                                                    newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+                                                    setEditStartTime(newDate);
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                    {showStartTimePicker && (
                                         <DateTimePicker
                                             value={editStartTime}
                                             mode="time"
                                             display="default"
                                             onChange={(event, date) => {
-                                                setShowStartPicker(false);
-                                                if (date) setEditStartTime(date);
+                                                setShowStartTimePicker(false);
+                                                if (date) {
+                                                    const newDate = new Date(editStartTime);
+                                                    newDate.setHours(date.getHours(), date.getMinutes(), 0);
+                                                    setEditStartTime(newDate);
+                                                }
                                             }}
                                         />
                                     )}
-                                    {showEndPicker && (
+
+                                    {showEndDatePicker && (
+                                        <DateTimePicker
+                                            value={editEndTime}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(event, date) => {
+                                                setShowEndDatePicker(false);
+                                                if (date) {
+                                                    const newDate = new Date(editEndTime);
+                                                    newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+                                                    setEditEndTime(newDate);
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                    {showEndTimePicker && (
                                         <DateTimePicker
                                             value={editEndTime}
                                             mode="time"
                                             display="default"
                                             onChange={(event, date) => {
-                                                setShowEndPicker(false);
-                                                if (date) setEditEndTime(date);
+                                                setShowEndTimePicker(false);
+                                                if (date) {
+                                                    const newDate = new Date(editEndTime);
+                                                    newDate.setHours(date.getHours(), date.getMinutes(), 0);
+                                                    setEditEndTime(newDate);
+                                                }
                                             }}
                                         />
                                     )}
@@ -671,6 +873,10 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 14,
     },
+    moreOptionsBtn: {
+        padding: 8,
+        marginLeft: 4,
+    },
     addBtn: {
         width: 36,
         height: 36,
@@ -688,6 +894,7 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: "center",
+        alignItems: "center",
         backgroundColor: "rgba(0,0,0,0.4)",
         padding: 24,
     },
@@ -696,12 +903,27 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 20,
         maxHeight: "85%",
+        width: "100%",
+    },
+    compactModalContent: {
+        backgroundColor: COLORS.background,
+        borderRadius: 16,
+        padding: 20,
+        width: "100%",
+        maxWidth: 320,
     },
     modalTitle: {
         fontFamily: FONTS.semiBold,
-        fontSize: 18,
+        fontSize: 17,
         color: COLORS.textPrimary,
+        marginBottom: 8,
+    },
+    modalText: {
+        fontFamily: FONTS.regular,
+        fontSize: 14,
+        color: COLORS.textDescription,
         marginBottom: 20,
+        lineHeight: 20,
     },
     modalInput: {
         height: 48,
@@ -863,26 +1085,36 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         flex: 1,
-        height: 48,
-        borderRadius: 24,
+        height: 40,
+        borderRadius: 20,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#EAEAEA",
     },
     saveButton: {
         flex: 1,
-        height: 48,
-        borderRadius: 24,
+        height: 40,
+        borderRadius: 20,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: COLORS.primary,
     },
+    deleteButton: {
+        flex: 1,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "red",
+    },
     cancelButtonText: {
         fontFamily: FONTS.semiBold,
+        fontSize: 13,
         color: COLORS.textPrimary,
     },
     saveButtonText: {
         fontFamily: FONTS.semiBold,
+        fontSize: 13,
         color: COLORS.white,
     },
 });
