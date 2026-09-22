@@ -206,7 +206,11 @@ export default function Playlist() {
                         </View>
                     </View>
 
-                    <View style={styles.buttonsContainer}>
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false} 
+                        contentContainerStyle={styles.buttonsContainer}
+                    >
                         {isOwner && (
                             <TouchableOpacity style={styles.infoButton} onPress={() => {
                                 setEditName(playlistName);
@@ -232,7 +236,7 @@ export default function Playlist() {
                                 <Text style={[styles.infoButtonText, { color: 'red' }]}> Delete </Text>
                             </TouchableOpacity>
                         )}
-                    </View>
+                    </ScrollView>
 
                     <View style={styles.divider} />
 
