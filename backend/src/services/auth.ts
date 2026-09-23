@@ -1,12 +1,12 @@
 import { validateEmail, validatePassword } from "../utils/validators";
 import bcrypt from "bcrypt";
-import { AuthProvider, PrismaClient } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import * as nodemailer from "nodemailer";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaService();
 const client = new OAuth2Client("119307991318-6q08olkvff98ol795k125ff5boh9ng8l.apps.googleusercontent.com")
 
 const transporter = nodemailer.createTransport({

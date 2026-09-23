@@ -8,9 +8,10 @@ import { PlaylistController } from './playlist.controller';
 import { PlayerModule } from './player/player.module';
 import { LiveSessionController } from './live_session.controller';
 import { LiveSessionService } from './services/live_session';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [PlayerModule, FriendsModule],
+  imports: [PlayerModule, PrismaModule, FriendsModule],
   controllers: [
     AppController,
     HealthController,
