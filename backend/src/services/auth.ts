@@ -19,6 +19,7 @@ const transporter = nodemailer.createTransport({
 export async function registerUser(email: string, password: string, username: string) {
   if (!validateEmail(email)) throw new BadRequestException("Invalid email");
   if (!validatePassword(password)) throw new UnauthorizedException("Invalid password");
+  if (username.length > 15) throw new BadRequestException("Username cannot be longer than 15 characters.");
 
   const user = await prisma.user.findUnique({ where: { email: email } });
   if (user) throw new BadRequestException("Email is already taken");
@@ -290,6 +291,7 @@ export async function getUserProfile(userId: string) {
 	});
 
 	return {
+		id: user?.id,
 		username: user?.username,
 		email: user?.email,
 		profileImage: user?.profileImage,

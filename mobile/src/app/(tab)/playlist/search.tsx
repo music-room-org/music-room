@@ -53,9 +53,9 @@ export default function PlaylistSearch() {
 		}
 	};
 
-	const handleSearch = async () => {
-
-		if (!searchQuery.trim()) {
+	const handleSearch = async (text: string) => {
+		setSearchQuery(text);
+		if (!text.trim()) {
 			setTrackResults([]);
 			return;
 		}
@@ -85,7 +85,7 @@ export default function PlaylistSearch() {
 				<View style={styles.header}>
 
 					<TouchableOpacity
-						onPress={() => router.back()}
+						onPress={() => router.push(`/playlist/${id}`)}
 						style={styles.backButton}
 					>
 						<ChevronLeft
@@ -117,8 +117,8 @@ export default function PlaylistSearch() {
 
 					<TextInput
 						value={searchQuery}
-						onChangeText={setSearchQuery}
-						onSubmitEditing={handleSearch}
+						onChangeText={handleSearch}
+						onSubmitEditing={() => handleSearch(searchQuery)}
 						placeholder="Search for a title or an artist"
 						placeholderTextColor={COLORS.textMuted}
 						style={styles.searchInput}

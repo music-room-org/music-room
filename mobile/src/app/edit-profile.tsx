@@ -178,6 +178,7 @@ export default function EditProfile() {
 							value={username}
 							onChangeText={setUsername}
 							autoCapitalize="none"
+							maxLength={15}
 						/>
 					</View>
 

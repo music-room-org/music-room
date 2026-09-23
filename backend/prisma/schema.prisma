@@ -54,6 +54,12 @@ model User {
   sentRequests Friendship[] @relation("SentRequests")
   receivedRequests Friendship[] @relation("ReceivedRequests")
 
+  playlistCollaborations PlaylistCollaborator[]
+  addedTracks            PlaylistTrack[]
+  //Live session
+  invitedToSessions LiveSession[]
+
+
 }
 
 model Playlist {
@@ -69,6 +75,8 @@ model Playlist {
   ownerId String
 
   playlistTracks PlaylistTrack[]
+
+  collaborators PlaylistCollaborator[]
 }
 
 model Track {
@@ -78,10 +86,9 @@ model Track {
   sourceId String
   addedAt  DateTime @default(now())
 
-  // Relation : à quelle playlist appartient ce morceau
-  playlistTracks PlaylistTrack[]
-
-  votes Vote[]
+  // Relation : à quelle playlist ou liveSession appartient ce morceau
+  playlistTracks	PlaylistTrack[]
+  liveSessionTracks	LiveSessionTrack[]
 }
 
 model PlaylistTrack {
@@ -91,25 +98,59 @@ model PlaylistTrack {
 	playlistId	String
 	position	Int
 	addedAt		DateTime @default(now())
+  addedById String?
+  addedBy   User? @relation(fields: [addedById], references: [id])
 
   @@id([playlistId, trackId])  
 }
 
+enum LicenseType {
+  OPEN
+  INVITED_ONLY
+  LOCATION_TIME
+}
+
+model LiveSession {
+	id					String		@id @default(uuid())
+	name				String
+	hostUserId	String
+	createdAt		DateTime	@default(now())
+
+	isPublic		Boolean		@default(true)
+  license      LicenseType  @default(OPEN)
+  latitude            Float?
+  longitude           Float?
+  startTime           DateTime?
+  endTime             DateTime?
+	invitedUsers		User[]
+	liveSessionTracks	LiveSessionTrack[]
+}
+
+model LiveSessionTrack {
+	liveSession		LiveSession	@relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+	liveSessionId	String
+	track			Track		@relation(fields: [trackId], references: [id])
+	trackId			String
+	addedAt			DateTime		@default(now())
+
+	votes			Vote[]
+	@@id([liveSessionId, trackId])
+}
 
 model Vote {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
+	createdAt	DateTime		@default(now())
 
-  // Qui vote
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
+	// Qui vote
+	user	User	@relation(fields: [userId], references: [id])
+	userId	String
 
-  // Pour quel morceau
-  track   Track  @relation(fields: [trackId], references: [id])
-  trackId String
+	// Pour quel morceau et quelle session
+	liveSessionTrack	LiveSessionTrack	@relation(fields: [liveSessionId, trackId], references: [liveSessionId, trackId], onDelete: Cascade)
+	liveSessionId		String
+	trackId				String
 
-  // Un même user ne peut voter qu'une fois par morceau
-  @@unique([userId, trackId])
+	// Un même user ne peut voter qu'une fois par morceau par session
+	@@id([liveSessionId, trackId,  userId])
 }
 
 enum FriendshipStatus {
@@ -130,4 +171,17 @@ model Friendship {
   receiverId  String
 
   @@unique([senderId, receiverId])
+}
+
+model PlaylistCollaborator {
+  id  String  @id @default(uuid())
+  status  FriendshipStatus  @default(PENDING)
+
+  playlistId String
+  playlist   Playlist         @relation(fields: [playlistId], references: [id])
+
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+
+  @@unique([playlistId, userId])
 }

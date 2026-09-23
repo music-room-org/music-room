@@ -19,19 +19,13 @@ const ICONS = {
 function CustomTabBar({ state, navigation, hasNotification }: BottomTabBarProps & { hasNotification: boolean }) {
 	return (
 		<View style={styles.tabBarContainer}>
-			<PlayerBar />
 			<View style={styles.tabBar}>
 				{state.routes.map((route, index) => {
 					const activeRouteName = state.routes[state.index].name;
-
 					const focused = state.index === index || (route.name === 'library' && activeRouteName.startsWith('playlist'));
 					const color = focused ? COLORS.primary : COLORS.tabInactive;
-					
-					if (route.name === 'playlist')
-						return null;
 
 					const Icon = ICONS[route.name as keyof typeof ICONS];
-
 					if (!Icon) return null;
 
 					const onPress = () => {
@@ -40,27 +34,27 @@ function CustomTabBar({ state, navigation, hasNotification }: BottomTabBarProps 
 							target: route.key,
 							canPreventDefault: true,
 						});
+
 						if (!focused && !event.defaultPrevented) {
 							navigation.navigate(route.name);
 						}
 					};
 
-				return (
-					<TouchableOpacity
-						key={route.key}
-						onPress={onPress}
-						style={styles.tabItem}
-						activeOpacity={0.7}
-					>
-						<View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-							<Icon color={color} size={26} />
-
-							{route.name === 'profile' && hasNotification && (
-								<View style={styles.notificationBadge} />
-							)}
-						</View>
-					</TouchableOpacity>
-				);
+					return (
+						<TouchableOpacity
+							key={route.key}
+							onPress={onPress}
+							style={styles.tabItem}
+							activeOpacity={0.7}
+						>
+							<View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
+								<Icon color={color} size={26} />
+								{route.name === 'profile' && hasNotification && (
+									<View style={styles.notificationBadge} />
+								)}
+							</View>
+						</TouchableOpacity>
+					);
 				})}
 			</View>
 		</View>
@@ -71,12 +65,10 @@ async function getToken() {
 	if (Platform.OS === "web") {
 		return localStorage.getItem("userToken");
 	}
-
 	return await SecureStore.getItemAsync("userToken");
 }
 
 export default function TabsLayout() {
-
 	const [hasNotification, setHasNotification] = useState(false);
 
 	useEffect(() => {
@@ -84,61 +76,67 @@ export default function TabsLayout() {
 
 		const connectSocket = async () => {
 			const token = await getToken();
-
-			if (!token)
-				return;
+			if (!token) return;
 
 			const apiUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
 
+			// Vérification des requêtes d'amis
 			const response = await fetch(`${apiUrl}/friends/pending`, {
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
+				headers: { Authorization: `Bearer ${token}` },
 			});
-
 			if (response.ok) {
 				const pendingRequests = await response.json();
-				if (pendingRequests.length > 0)
-					setHasNotification(true);
+				if (pendingRequests.length > 0) setHasNotification(true);
+			}
+
+			const collabResponse = await fetch(`${apiUrl}/playlists/collaborators/pending`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (collabResponse.ok) {
+				const pendingCollabs = await collabResponse.json();
+				if (pendingCollabs.length > 0) setHasNotification(true);
 			}
 
 			socket = io(apiUrl, {
-				extraHeaders: {
-					Authorization: `Bearer ${token}`,
-				},
+				extraHeaders: { Authorization: `Bearer ${token}` },
 			});
 
 			socket.on("newRequest", () => {
 				setHasNotification(true);
 				Alert.alert("New friend request!");
+				DeviceEventEmitter.emit("refreshProfile");
 			});
+
+			socket.on("newCollabRequest", () => {
+				setHasNotification(true);
+				Alert.alert("New collaboration request!");
+				DeviceEventEmitter.emit("refreshProfile");
+			});
+
 			socket.on("friendAccepted", () => {
 				Alert.alert("Friend request accepted!");
 			});
 		};
 
 		const subscription = DeviceEventEmitter.addListener(
-			"clearNotification", () => {setHasNotification(false);}
+			"clearNotification",
+			() => { setHasNotification(false); }
 		);
 
 		connectSocket();
+
 		return () => {
 			socket?.disconnect();
+			subscription.remove();
 		};
 	}, []);
 
 	return (
-		<Tabs
-			tabBar={(props) => <CustomTabBar {...props} hasNotification={hasNotification} />}
-			screenOptions={{
-				headerShown: false,
-			}}
-		>
+		<Tabs tabBar={(props) => <CustomTabBar {...props} hasNotification={hasNotification} />} screenOptions={{ headerShown: false }}>
 			<Tabs.Screen name='index' />
 			<Tabs.Screen name='research' />
 			<Tabs.Screen name='library' />
 			<Tabs.Screen name='profile' />
-			<Tabs.Screen name='playlist' options={{}} />
 		</Tabs>
 	);
 }
@@ -159,8 +157,8 @@ const styles = StyleSheet.create({
 		height: 70,
 		borderWidth: 1,
 		borderColor: COLORS.cardBorder,
-		elevation: 5, // android
-		shadowOpacity: 0.05, // ios
+		elevation: 5,
+		shadowOpacity: 0.05,
 		marginBottom: 20,
 	},
 	tabItem: {
