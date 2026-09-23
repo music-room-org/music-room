@@ -1,6 +1,6 @@
 import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards, Req, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { LiveSessionService } from './services/live_session';
-import { Guard } from './security/guard';
+import { LiveSessionService } from './live_session.service';
+import { Guard } from '../security/guard';
 
 @Controller('live_session')
 export class LiveSessionController {
