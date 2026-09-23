@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
 	},
 	input: {
 		flex: 1,
-		marginLeft: 12, 
+		marginLeft: 12,
 		fontFamily: FONTS.regular,
 		fontSize: 16,
 		color: COLORS.inputText
