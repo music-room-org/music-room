@@ -13,9 +13,9 @@ let MapView: any;
 let Marker: any;
 
 if (Platform.OS !== 'web') {
-    const Maps = require('react-native-maps');
-    MapView = Maps.default;
-    Marker = Maps.Marker;
+	const Maps = require('react-native-maps');
+	MapView = Maps.default;
+	Marker = Maps.Marker;
 }
 
 async function getToken() {
@@ -44,46 +44,46 @@ export default function Library() {
 	const [isPublic, setIsPublic] = useState(true);
 	const [license, setLicense] = useState('OPEN'); 
 
-    const [addressQuery, setAddressQuery] = useState("");
-    const [location, setLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
+	const [addressQuery, setAddressQuery] = useState("");
+	const [location, setLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
 	const [resolvedAddress, setResolvedAddress] = useState("");
 
-    
+	
 
-    // Heures ET Dates
-    const [startTime, setStartTime] = useState(new Date());
-    const [endTime, setEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
-    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-    const [showStartTimePicker, setShowStartTimePicker] = useState(false);
-    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-    const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+	// Heures ET Dates
+	const [startTime, setStartTime] = useState(new Date());
+	const [endTime, setEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
+	const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+	const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+	const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+	const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
-    const geocodeAddress = async () => {
-        if (!addressQuery.trim()) return;
-        try {
-            if (Platform.OS === 'web') {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}`);
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    setLocation({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
-                    setResolvedAddress(addressQuery);
-                } else {
-                    alert("Cannot find address");
-                }
-            } else {
-                const result = await Location.geocodeAsync(addressQuery);
-                if (result.length > 0) {
-                    setLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
-                    setResolvedAddress(addressQuery);
-                } else {
-                    alert("Cannot find address");
-                }
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Error while looking for the address.");
-        }
-    };
+	const geocodeAddress = async () => {
+		if (!addressQuery.trim()) return;
+		try {
+			if (Platform.OS === 'web') {
+				const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}`);
+				const data = await response.json();
+				if (data && data.length > 0) {
+					setLocation({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
+					setResolvedAddress(addressQuery);
+				} else {
+					alert("Cannot find address");
+				}
+			} else {
+				const result = await Location.geocodeAsync(addressQuery);
+				if (result.length > 0) {
+					setLocation({ latitude: result[0].latitude, longitude: result[0].longitude });
+					setResolvedAddress(addressQuery);
+				} else {
+					alert("Cannot find address");
+				}
+			}
+		} catch (e) {
+			console.error(e);
+			alert("Error while looking for the address.");
+		}
+	};
 
 	const handleCreatePlaylist = async () => {
 		if (!newPlaylistName.trim()) {
@@ -272,31 +272,31 @@ export default function Library() {
 			</ScrollView>
 
 			<Modal visible={isTypeMenuVisible} transparent={true} animationType="slide" onRequestClose={() => setIsTypeMenuVisible(false)}>
-                <View style={styles.typeMenuOverlay}>
-                    <View style={styles.typeMenu}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
-                            <TouchableOpacity onPress={() => setIsTypeMenuVisible(false)}>
-                                <X size={24} color={COLORS.textPrimary} />
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
-                            <List size={24} color={COLORS.textPrimary} />
-                            <Text style={styles.typeMenuText}>Classic playlist</Text>
-                        </TouchableOpacity>
+				<View style={styles.typeMenuOverlay}>
+					<View style={styles.typeMenu}>
+						<View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
+							<TouchableOpacity onPress={() => setIsTypeMenuVisible(false)}>
+								<X size={24} color={COLORS.textPrimary} />
+							</TouchableOpacity>
+						</View>
+						
+						<TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
+							<List size={24} color={COLORS.textPrimary} />
+							<Text style={styles.typeMenuText}>Classic playlist</Text>
+						</TouchableOpacity>
 
-                        <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(true); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
-                            <User size={24} color={COLORS.textPrimary} />
-                            <Text style={styles.typeMenuText}>Collaborative playlist</Text>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(true); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
-                            <Radio size={24} color={COLORS.primary} />
-                            <Text style={[styles.typeMenuText, { color: COLORS.primary }]}> Live Session Event </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
+						<TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(true); setIsLiveMode(false); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
+							<User size={24} color={COLORS.textPrimary} />
+							<Text style={styles.typeMenuText}>Collaborative playlist</Text>
+						</TouchableOpacity>
+						
+						<TouchableOpacity style={styles.typeMenuItem} onPress={() => { setIsCollabMode(false); setIsLiveMode(true); setIsTypeMenuVisible(false); setIsCreateModalVisible(true); }}>
+							<Radio size={24} color={COLORS.primary} />
+							<Text style={[styles.typeMenuText, { color: COLORS.primary }]}> Live Session Event </Text>
+						</TouchableOpacity>
+					</View>
+				</View>
+			</Modal>
 
 			<Modal visible={isCreateModalVisible} transparent={true} animationType="fade">
 				<View style={styles.modalBackdrop}>
@@ -361,123 +361,123 @@ export default function Library() {
 												</TouchableOpacity>
 											</View>
 
-                                            {resolvedAddress !== "" && (
-                                                <Text style={styles.resolvedAddressText}>
-                                                    📍 {resolvedAddress}
-                                                </Text>
-                                            )}
+											{resolvedAddress !== "" && (
+												<Text style={styles.resolvedAddressText}>
+													📍 {resolvedAddress}
+												</Text>
+											)}
 
-                                            <View style={styles.mapContainer}>
-                                                {Platform.OS === 'web' ? (
-                                                    <iframe
-                                                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${location.longitude - 0.01},${location.latitude - 0.01},${location.longitude + 0.01},${location.latitude + 0.01}&layer=mapnik&marker=${location.latitude},${location.longitude}`}
-                                                        style={{ width: '100%', height: '100%', border: 'none' }}
-                                                        title="Map de l'événement"
-                                                    />
-                                                ) : (
-                                                    <MapView 
-                                                        style={styles.map}
-                                                        region={{
-                                                            latitude: location.latitude,
-                                                            longitude: location.longitude,
-                                                            latitudeDelta: 0.05,
-                                                            longitudeDelta: 0.05,
-                                                        }}
-                                                    >
-                                                        <Marker 
-                                                            coordinate={location} 
-                                                            draggable 
-                                                            onDragEnd={(e: any) => setLocation(e.nativeEvent.coordinate)}
-                                                        />
-                                                    </MapView>
-                                                )}
-                                            </View>
+											<View style={styles.mapContainer}>
+												{Platform.OS === 'web' ? (
+													<iframe
+														src={`https://www.openstreetmap.org/export/embed.html?bbox=${location.longitude - 0.01},${location.latitude - 0.01},${location.longitude + 0.01},${location.latitude + 0.01}&layer=mapnik&marker=${location.latitude},${location.longitude}`}
+														style={{ width: '100%', height: '100%', border: 'none' }}
+														title="Map de l'événement"
+													/>
+												) : (
+													<MapView 
+														style={styles.map}
+														region={{
+															latitude: location.latitude,
+															longitude: location.longitude,
+															latitudeDelta: 0.05,
+															longitudeDelta: 0.05,
+														}}
+													>
+														<Marker 
+															coordinate={location} 
+															draggable 
+															onDragEnd={(e: any) => setLocation(e.nativeEvent.coordinate)}
+														/>
+													</MapView>
+												)}
+											</View>
 
-                                            <Text style={styles.inputLabel}>Beginning of the event</Text>
-                                            <View style={styles.timeRow}>
-                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartDatePicker(true)}>
-                                                    <Text style={styles.timeBtnText}>{startTime.toLocaleDateString()}</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartTimePicker(true)}>
-                                                    <Text style={styles.timeBtnText}>{startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
-                                                </TouchableOpacity>
-                                            </View>
+											<Text style={styles.inputLabel}>Beginning of the event</Text>
+											<View style={styles.timeRow}>
+												<TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartDatePicker(true)}>
+													<Text style={styles.timeBtnText}>{startTime.toLocaleDateString()}</Text>
+												</TouchableOpacity>
+												<TouchableOpacity style={styles.timeBtn} onPress={() => setShowStartTimePicker(true)}>
+													<Text style={styles.timeBtnText}>{startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+												</TouchableOpacity>
+											</View>
 
-                                            <Text style={styles.inputLabel}>End of the event</Text>
-                                            <View style={styles.timeRow}>
-                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndDatePicker(true)}>
-                                                    <Text style={styles.timeBtnText}>{endTime.toLocaleDateString()}</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndTimePicker(true)}>
-                                                    <Text style={styles.timeBtnText}>{endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
-                                                </TouchableOpacity>
-                                            </View>
+											<Text style={styles.inputLabel}>End of the event</Text>
+											<View style={styles.timeRow}>
+												<TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndDatePicker(true)}>
+													<Text style={styles.timeBtnText}>{endTime.toLocaleDateString()}</Text>
+												</TouchableOpacity>
+												<TouchableOpacity style={styles.timeBtn} onPress={() => setShowEndTimePicker(true)}>
+													<Text style={styles.timeBtnText}>{endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+												</TouchableOpacity>
+											</View>
 
-                                            {showStartDatePicker && (
-                                                <DateTimePicker
-                                                    value={startTime}
-                                                    mode="date"
-                                                    display="default"
-                                                    onChange={(event, date) => {
-                                                        setShowStartDatePicker(false);
-                                                        if (date) {
-                                                            const newDate = new Date(startTime);
-                                                            newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-                                                            setStartTime(newDate);
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                            {showStartTimePicker && (
-                                                <DateTimePicker
-                                                    value={startTime}
-                                                    mode="time"
-                                                    display="default"
-                                                    onChange={(event, date) => {
-                                                        setShowStartTimePicker(false);
-                                                        if (date) {
-                                                            const newDate = new Date(startTime);
-                                                            newDate.setHours(date.getHours(), date.getMinutes(), 0);
-                                                            setStartTime(newDate);
-                                                        }
-                                                    }}
-                                                />
-                                            )}
+											{showStartDatePicker && (
+												<DateTimePicker
+													value={startTime}
+													mode="date"
+													display="default"
+													onChange={(event, date) => {
+														setShowStartDatePicker(false);
+														if (date) {
+															const newDate = new Date(startTime);
+															newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+															setStartTime(newDate);
+														}
+													}}
+												/>
+											)}
+											{showStartTimePicker && (
+												<DateTimePicker
+													value={startTime}
+													mode="time"
+													display="default"
+													onChange={(event, date) => {
+														setShowStartTimePicker(false);
+														if (date) {
+															const newDate = new Date(startTime);
+															newDate.setHours(date.getHours(), date.getMinutes(), 0);
+															setStartTime(newDate);
+														}
+													}}
+												/>
+											)}
 
-                                            {showEndDatePicker && (
-                                                <DateTimePicker
-                                                    value={endTime}
-                                                    mode="date"
-                                                    display="default"
-                                                    onChange={(event, date) => {
-                                                        setShowEndDatePicker(false);
-                                                        if (date) {
-                                                            const newDate = new Date(endTime);
-                                                            newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-                                                            setEndTime(newDate);
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                            {showEndTimePicker && (
-                                                <DateTimePicker
-                                                    value={endTime}
-                                                    mode="time"
-                                                    display="default"
-                                                    onChange={(event, date) => {
-                                                        setShowEndTimePicker(false);
-                                                        if (date) {
-                                                            const newDate = new Date(endTime);
-                                                            newDate.setHours(date.getHours(), date.getMinutes(), 0);
-                                                            setEndTime(newDate);
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                        </View>
-                                    )}
-                                </>
-                            )}
+											{showEndDatePicker && (
+												<DateTimePicker
+													value={endTime}
+													mode="date"
+													display="default"
+													onChange={(event, date) => {
+														setShowEndDatePicker(false);
+														if (date) {
+															const newDate = new Date(endTime);
+															newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+															setEndTime(newDate);
+														}
+													}}
+												/>
+											)}
+											{showEndTimePicker && (
+												<DateTimePicker
+													value={endTime}
+													mode="time"
+													display="default"
+													onChange={(event, date) => {
+														setShowEndTimePicker(false);
+														if (date) {
+															const newDate = new Date(endTime);
+															newDate.setHours(date.getHours(), date.getMinutes(), 0);
+															setEndTime(newDate);
+														}
+													}}
+												/>
+											)}
+										</View>
+									)}
+								</>
+							)}
 
 							{(isCollabMode || (isLiveMode && (!isPublic || license === 'INVITED_ONLY'))) && (
 								<>
@@ -521,29 +521,29 @@ export default function Library() {
 								</>
 							)}
 
-                            <View style={styles.modalActions}>
-                                <TouchableOpacity onPress={() => {
-                                    setIsCreateModalVisible(false);
-                                    setNewPlaylistName("");
-                                    setFriendSearchQuery("");
-                                    setSelectedFriends([]);
-                                    setAddressQuery("");
-                                    setResolvedAddress("");
-                                    setIsLiveMode(false);
-                                }} style={styles.cancelBtn}>
-                                    <Text style={styles.cancelBtnText}>Cancel</Text>
-                                </TouchableOpacity>
+							<View style={styles.modalActions}>
+								<TouchableOpacity onPress={() => {
+									setIsCreateModalVisible(false);
+									setNewPlaylistName("");
+									setFriendSearchQuery("");
+									setSelectedFriends([]);
+									setAddressQuery("");
+									setResolvedAddress("");
+									setIsLiveMode(false);
+								}} style={styles.cancelBtn}>
+									<Text style={styles.cancelBtnText}>Cancel</Text>
+								</TouchableOpacity>
 
-                                <TouchableOpacity onPress={handleCreatePlaylist} style={styles.saveBtn}>
-                                    <Text style={styles.saveBtnText}>Create</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
-        </SafeAreaView>
-    );
+								<TouchableOpacity onPress={handleCreatePlaylist} style={styles.saveBtn}>
+									<Text style={styles.saveBtnText}>Create</Text>
+								</TouchableOpacity>
+							</View>
+						</ScrollView>
+					</View>
+				</View>
+			</Modal>
+		</SafeAreaView>
+	);
 }
 
 const styles = StyleSheet.create({

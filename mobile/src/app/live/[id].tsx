@@ -1,13 +1,12 @@
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, ScrollView, Image, ActivityIndicator, Modal, Switch, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ThumbsUp, Play, Plus, Search, Power, Pencil, X, MoreVertical } from "lucide-react-native";
+import { ChevronLeft, ThumbsUp, Play, Plus, Search, Power, Pencil, X, MoreVertical, Calendar, Clock, MapPin } from "lucide-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { COLORS, FONTS, API_BASE_URL } from "@/constants";
 import { useState, useCallback, useEffect, useRef } from "react";
 import * as SecureStore from "expo-secure-store";
 import { usePlayer } from "@/context/PlayerContext";
 import { PlayerBar } from "@/components";
-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 
@@ -40,7 +39,6 @@ export default function LiveSession() {
 	const { id } = useLocalSearchParams();
 	const router = useRouter();
 	const { playTrack } = usePlayer();
-
 	const isClosing = useRef(false);
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const shouldRedirectRef = useRef(false);
@@ -50,18 +48,17 @@ export default function LiveSession() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchResults, setSearchResults] = useState<any[]>([]);
 	const [isSearching, setIsSearching] = useState(false);
-
+	
 	const [hostUserId, setHostUserId] = useState("");
 	const [myUserId, setMyUserId] = useState("");
 	const [isPublic, setIsPublic] = useState(true);
 	const [license, setLicense] = useState("OPEN");
 	const [invitedUsers, setInvitedUsers] = useState<any[]>([]);
-
+	
 	const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 	const [editName, setEditName] = useState("");
 	const [editIsPublic, setEditIsPublic] = useState(true);
 	const [editLicense, setEditLicense] = useState("OPEN");
-	
 	const [editAddressQuery, setEditAddressQuery] = useState("");
 	const [editResolvedAddress, setEditResolvedAddress] = useState("");
 	const [editLocation, setEditLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
@@ -71,11 +68,10 @@ export default function LiveSession() {
 	const [showStartTimePicker, setShowStartTimePicker] = useState(false);
 	const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 	const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-
 	const [sessionLocation, setSessionLocation] = useState({ latitude: 48.8566, longitude: 2.3522 });
 	const [sessionStartTime, setSessionStartTime] = useState(new Date());
 	const [sessionEndTime, setSessionEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
-
+	
 	// New states for GPS verification at launch
 	const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
 	const [isOnSiteAndInTime, setIsOnSiteAndInTime] = useState(false);
@@ -87,9 +83,10 @@ export default function LiveSession() {
 
 	const [errorModalVisible, setErrorModalVisible] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
-	
+
 	const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 	const [trackToDelete, setTrackToDelete] = useState<string | null>(null);
+	const [displayAddress, setDisplayAddress] = useState("");
 
 	const apiUrl = Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
@@ -101,18 +98,20 @@ export default function LiveSession() {
 
 	const fetchSession = useCallback(async () => {
 		if (isClosing.current) return;
-
 		try {
 			const token = await getToken();
-			
 			if (!myUserId) {
-				const profileRes = await fetch(`${apiUrl}/auth/profil`, { headers: { Authorization: `Bearer ${token}` } });
+				const profileRes = await fetch(`${apiUrl}/auth/profil`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
 				if (profileRes.ok) {
 					const profileData = await profileRes.json();
 					setMyUserId(profileData.id);
 					setMyUsername(profileData.username);
 				}
-				const friendsRes = await fetch(`${apiUrl}/friends/list`, { headers: { Authorization: `Bearer ${token}` } });
+				const friendsRes = await fetch(`${apiUrl}/friends/list`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
 				if (friendsRes.ok) {
 					setFriendsList(await friendsRes.json());
 				}
@@ -135,7 +134,6 @@ export default function LiveSession() {
 				}
 				if (data.startTime) setSessionStartTime(new Date(data.startTime));
 				if (data.endTime) setSessionEndTime(new Date(data.endTime));
-				
 				if (data.liveSessionTracks) {
 					setTracks(data.liveSessionTracks);
 				}
@@ -167,25 +165,23 @@ export default function LiveSession() {
 		let mounted = true;
 		const isOwner = hostUserId === myUserId;
 		const isInvited = invitedUsers.some(u => u.id === myUserId);
-
+		
 		if (license === 'LOCATION_TIME' && !isOwner && !isInvited && sessionLocation.latitude) {
 			const verifyAccess = async () => {
 				const now = new Date();
 				if (sessionStartTime && now < sessionStartTime) return;
 				if (sessionEndTime && now > sessionEndTime) return;
-
+				
 				try {
 					const { status } = await Location.requestForegroundPermissionsAsync();
 					if (status !== 'granted') {
 						if (mounted) showError("You must allow location access to participate in this event.", true);
 						return;
 					}
-
 					const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
 					if (mounted) {
 						setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
 						const dist = getDistance(sessionLocation.latitude, sessionLocation.longitude, loc.coords.latitude, loc.coords.longitude);
-						
 						if (dist <= 150) {
 							setIsOnSiteAndInTime(true);
 						} else {
@@ -200,6 +196,28 @@ export default function LiveSession() {
 			verifyAccess();
 		}
 	}, [license, hostUserId, myUserId, sessionLocation, sessionStartTime, sessionEndTime, invitedUsers]);
+
+	useEffect(() => {
+		if (license === 'LOCATION_TIME' && sessionLocation.latitude && sessionLocation.longitude) {
+			(async () => {
+				try {
+					if (Platform.OS === 'web') {
+						const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${sessionLocation.latitude}&lon=${sessionLocation.longitude}`);
+						const data = await res.json();
+						if (data && data.display_name) setDisplayAddress(data.display_name);
+					} else {
+						const result = await Location.reverseGeocodeAsync({ latitude: sessionLocation.latitude, longitude: sessionLocation.longitude });
+						if (result && result.length > 0) {
+							const loc = result[0];
+							setDisplayAddress([loc.name, loc.streetNumber, loc.street, loc.city].filter(Boolean).join(", "));
+						}
+					}
+				} catch (error) {
+					console.error("Erreur lors de la récupération de l'adresse publique :", error);
+				}
+			})();
+		}
+	}, [sessionLocation, license]);
 
 	const geocodeEditAddress = async () => {
 		if (!editAddressQuery.trim()) return;
@@ -232,7 +250,6 @@ export default function LiveSession() {
 		try {
 			let currentLat = userLocation?.latitude;
 			let currentLon = userLocation?.longitude;
-
 			const isOwner = hostUserId === myUserId;
 			const isInvited = invitedUsers.some(u => u.id === myUserId);
 
@@ -252,20 +269,13 @@ export default function LiveSession() {
 			const response = await fetch(`${apiUrl}/live_session/vote`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ 
-					sessionId: id, 
-					trackId,
-					latitude: currentLat,
-					longitude: currentLon
-				})
+				body: JSON.stringify({ sessionId: id, trackId, latitude: currentLat, longitude: currentLon })
 			});
-
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
 				showError(errorData.message || "Unable to vote");
 				return;
 			}
-			
 			fetchSession();
 		} catch (err) {
 			console.error(err);
@@ -281,14 +291,12 @@ export default function LiveSession() {
 			});
 			if (response.ok) {
 				const nextTrackData = await response.json();
-				
 				playTrack({
 					id: nextTrackData.track.sourceId,
 					title: nextTrackData.track.title,
 					artist: nextTrackData.track.artist,
 					thumbnail: `https://i.ytimg.com/vi/${nextTrackData.track.sourceId}/hqdefault.jpg`
 				});
-				
 				fetchSession();
 			} else {
 				showError("No tracks in queue!");
@@ -317,7 +325,6 @@ export default function LiveSession() {
 		try {
 			let currentLat = userLocation?.latitude;
 			let currentLon = userLocation?.longitude;
-
 			const isOwner = hostUserId === myUserId;
 			const isInvited = invitedUsers.some(u => u.id === myUserId);
 
@@ -337,15 +344,8 @@ export default function LiveSession() {
 			const response = await fetch(`${apiUrl}/live_session/${id}/tracks`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ 
-					title: track.title, 
-					artist: track.artist || "Unknown Artist", 
-					sourceId: track.id,
-					latitude: currentLat,
-					longitude: currentLon
-				})
+				body: JSON.stringify({ title: track.title, artist: track.artist || "Unknown Artist", sourceId: track.id, latitude: currentLat, longitude: currentLon })
 			});
-
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
 				showError(`The server rejected the addition: ${errorData.message || response.status}`);
@@ -392,18 +392,15 @@ export default function LiveSession() {
 					invitedUsers: newCollaborators.map(f => f.id)
 				})
 			});
-
 			if (response.ok) {
 				setIsEditModalVisible(false);
 				setNewCollaborators([]);
 				setFriendSearchQuery("");
 				setEditAddressQuery("");
 				setEditResolvedAddress("");
-				
 				if (editLicense === 'LOCATION_TIME') {
 					setSessionLocation(editLocation);
 				}
-				
 				fetchSession();
 			} else {
 				showError("Failed to update session");
@@ -417,13 +414,11 @@ export default function LiveSession() {
 		try {
 			isClosing.current = true;
 			if (intervalRef.current) clearInterval(intervalRef.current);
-
 			const token = await getToken();
 			const response = await fetch(`${apiUrl}/live_session/${id}`, {
 				method: "DELETE",
 				headers: { Authorization: `Bearer ${token}` }
 			});
-			
 			if (response.ok) {
 				router.replace("/library");
 			} else {
@@ -439,12 +434,11 @@ export default function LiveSession() {
 
 	const isOwner = hostUserId === myUserId;
 	const isInvited = invitedUsers.some(u => u.id === myUserId);
-	
 	// The boolean controls when the search bar should be displayed
 	const canModifyTracks = isOwner || license === 'OPEN' || isInvited || (license === 'LOCATION_TIME' && isOnSiteAndInTime);
 
-	const filteredFriends = friendSearchQuery.trim() === "" 
-		? [] 
+	const filteredFriends = friendSearchQuery.trim() === ""
+		? []
 		: friendsList.filter((friend: any) => {
 			const friendUser = friend.sender?.username === myUsername ? friend.receiver : friend.sender;
 			return friendUser?.username?.toLowerCase().includes(friendSearchQuery.toLowerCase());
@@ -457,14 +451,12 @@ export default function LiveSession() {
 					<TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
 						<ChevronLeft size={28} color={COLORS.textPrimary} />
 					</TouchableOpacity>
-					
 					<View style={styles.headerTitleContainer}>
 						<Text style={styles.headerTitle}>{sessionName}</Text>
 						<Text style={styles.headerSubtitle}>
-							{isPublic ? "🌍 Public" : "🔒 Private"} • {license === 'OPEN' ? 'Open Voting' : license === 'INVITED_ONLY' ? 'Invited Only' : 'Loc/Time Rules'}
+							{isPublic ? "  Public" : "  Private"} • {license === 'OPEN' ? 'Open Voting' : license === 'INVITED_ONLY' ? 'Invited Only' : 'Loc/Time Rules'}
 						</Text>
 					</View>
-
 					<View style={styles.headerRightActions}>
 						{isOwner && (
 							<TouchableOpacity onPress={async () => {
@@ -476,7 +468,6 @@ export default function LiveSession() {
 								setEditEndTime(sessionEndTime);
 								setEditAddressQuery("");
 								setEditResolvedAddress("");
-
 								if (license === 'LOCATION_TIME' && sessionLocation.latitude && sessionLocation.longitude) {
 									try {
 										if (Platform.OS === 'web') {
@@ -502,7 +493,6 @@ export default function LiveSession() {
 										console.error("Erreur lors de la récupération de l'adresse :", error);
 									}
 								}
-
 								setIsEditModalVisible(true);
 							}} style={styles.iconButton}>
 								<Pencil size={20} color={COLORS.primary} />
@@ -514,6 +504,29 @@ export default function LiveSession() {
 							</TouchableOpacity>
 						)}
 					</View>
+				</View>
+
+				<View style={styles.eventDetailsContainer}>
+					<View style={styles.eventDetailRow}>
+						<Calendar size={18} color={COLORS.primary} />
+						<Text style={styles.eventDetailText}>
+							{sessionStartTime.toLocaleDateString()} - {sessionEndTime.toLocaleDateString()}
+						</Text>
+					</View>
+					<View style={styles.eventDetailRow}>
+						<Clock size={18} color={COLORS.primary} />
+						<Text style={styles.eventDetailText}>
+							{sessionStartTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {sessionEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+						</Text>
+					</View>
+					{license === 'LOCATION_TIME' && displayAddress !== "" && (
+						<View style={styles.eventDetailRow}>
+							<MapPin size={18} color={COLORS.primary} />
+							<Text style={styles.eventDetailText} numberOfLines={2}>
+								{displayAddress}
+							</Text>
+						</View>
+					)}
 				</View>
 
 				{isOwner && (
@@ -561,9 +574,9 @@ export default function LiveSession() {
 							{tracks.map((item, index) => (
 								<View key={item.trackId} style={styles.trackCard}>
 									<Text style={styles.rankText}>#{index + 1}</Text>
-									<Image 
-										source={{ uri: item.track?.sourceId ? `https://i.ytimg.com/vi/${item.track.sourceId}/hqdefault.jpg` : "https://picsum.photos/100" }} 
-										style={styles.trackImage} 
+									<Image
+										source={{ uri: item.track?.sourceId ? `https://i.ytimg.com/vi/${item.track.sourceId}/hqdefault.jpg` : "https://picsum.photos/100" }}
+										style={styles.trackImage}
 									/>
 									<View style={styles.trackInfo}>
 										<Text style={styles.trackTitle} numberOfLines={1}>{item.track?.title}</Text>
@@ -573,9 +586,8 @@ export default function LiveSession() {
 										<ThumbsUp size={16} color="white" />
 										<Text style={styles.voteText}>{item.votes?.length || 0}</Text>
 									</TouchableOpacity>
-
 									{isOwner && (
-										<TouchableOpacity 
+										<TouchableOpacity
 											onPress={() => {
 												setTrackToDelete(item.trackId);
 												setIsDeleteModalVisible(true);
@@ -654,7 +666,6 @@ export default function LiveSession() {
 								<X size={24} color={COLORS.textPrimary} />
 							</TouchableOpacity>
 						</View>
-
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<TextInput
 								value={editName}
@@ -664,12 +675,10 @@ export default function LiveSession() {
 								style={styles.modalInput}
 								maxLength={15}
 							/>
-
 							<View style={styles.toggleRow}>
 								<Text style={styles.toggleLabel}>Visibility: Public</Text>
 								<Switch value={editIsPublic} onValueChange={setEditIsPublic} />
 							</View>
-
 							<Text style={styles.licenseTitle}>Voting License</Text>
 							<View style={styles.licenseRow}>
 								<TouchableOpacity style={[styles.licenseBtn, editLicense === 'OPEN' && styles.licenseBtnActive]} onPress={() => setEditLicense('OPEN')}>
@@ -686,9 +695,8 @@ export default function LiveSession() {
 							{editLicense === 'LOCATION_TIME' && (
 								<View style={styles.locTimeContainer}>
 									<Text style={styles.inputLabel}>Place of event</Text>
-									
 									<View style={styles.addressSearchRow}>
-										<TextInput 
+										<TextInput
 											value={editAddressQuery}
 											onChangeText={setEditAddressQuery}
 											placeholder="City, street, address..."
@@ -715,7 +723,7 @@ export default function LiveSession() {
 												title="Event map"
 											/>
 										) : (
-											<MapView 
+											<MapView
 												style={styles.map}
 												region={{
 													latitude: editLocation.latitude,
@@ -724,9 +732,9 @@ export default function LiveSession() {
 													longitudeDelta: 0.05,
 												}}
 											>
-												<Marker 
-													coordinate={editLocation} 
-													draggable 
+												<Marker
+													coordinate={editLocation}
+													draggable
 													onDragEnd={(e: any) => setEditLocation(e.nativeEvent.coordinate)}
 												/>
 											</MapView>
@@ -754,65 +762,132 @@ export default function LiveSession() {
 									</View>
 
 									{showStartDatePicker && (
-										<DateTimePicker
-											value={editStartTime}
-											mode="date"
-											display="default"
-											onChange={(event, date) => {
-												setShowStartDatePicker(false);
-												if (date) {
-													const newDate = new Date(editStartTime);
-													newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-													setEditStartTime(newDate);
-												}
-											}}
-										/>
+										Platform.OS === 'web' ? (
+											<input
+												type="date"
+												value={editStartTime.toISOString().split('T')[0]}
+												onChange={(e) => {
+													setShowStartDatePicker(false);
+													if (e.target.value) {
+														const newDate = new Date(editStartTime);
+														const [year, month, day] = e.target.value.split('-');
+														newDate.setFullYear(Number(year), Number(month) - 1, Number(day));
+														setEditStartTime(newDate);
+													}
+												}}
+												style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '10px' }}
+											/>
+										) : (
+											<DateTimePicker
+												value={editStartTime}
+												mode="date"
+												display="default"
+												onChange={(event, date) => {
+													setShowStartDatePicker(false);
+													if (date) {
+														const newDate = new Date(editStartTime);
+														newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+														setEditStartTime(newDate);
+													}
+												}}
+											/>
+										)
 									)}
 									{showStartTimePicker && (
-										<DateTimePicker
-											value={editStartTime}
-											mode="time"
-											display="default"
-											onChange={(event, date) => {
-												setShowStartTimePicker(false);
-												if (date) {
-													const newDate = new Date(editStartTime);
-													newDate.setHours(date.getHours(), date.getMinutes(), 0);
-													setEditStartTime(newDate);
-												}
-											}}
-										/>
+										Platform.OS === 'web' ? (
+											<input
+												type="time"
+												value={`${String(editStartTime.getHours()).padStart(2, '0')}:${String(editStartTime.getMinutes()).padStart(2, '0')}`}
+												onChange={(e) => {
+													setShowStartTimePicker(false);
+													if (e.target.value) {
+														const newDate = new Date(editStartTime);
+														const [hours, minutes] = e.target.value.split(':');
+														newDate.setHours(Number(hours), Number(minutes), 0);
+														setEditStartTime(newDate);
+													}
+												}}
+												style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '10px' }}
+											/>
+										) : (
+											<DateTimePicker
+												value={editStartTime}
+												mode="time"
+												display="default"
+												onChange={(event, date) => {
+													setShowStartTimePicker(false);
+													if (date) {
+														const newDate = new Date(editStartTime);
+														newDate.setHours(date.getHours(), date.getMinutes(), 0);
+														setEditStartTime(newDate);
+													}
+												}}
+											/>
+										)
 									)}
-
 									{showEndDatePicker && (
-										<DateTimePicker
-											value={editEndTime}
-											mode="date"
-											display="default"
-											onChange={(event, date) => {
-												setShowEndDatePicker(false);
-												if (date) {
-													const newDate = new Date(editEndTime);
-													newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-													setEditEndTime(newDate);
-												}
-											}}
-										/>
+										Platform.OS === 'web' ? (
+											<input
+												type="date"
+												value={editEndTime.toISOString().split('T')[0]}
+												onChange={(e) => {
+													setShowEndDatePicker(false);
+													if (e.target.value) {
+														const newDate = new Date(editEndTime);
+														const [year, month, day] = e.target.value.split('-');
+														newDate.setFullYear(Number(year), Number(month) - 1, Number(day));
+														setEditEndTime(newDate);
+													}
+												}}
+												style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '10px' }}
+											/>
+										) : (
+											<DateTimePicker
+												value={editEndTime}
+												mode="date"
+												display="default"
+												onChange={(event, date) => {
+													setShowEndDatePicker(false);
+													if (date) {
+														const newDate = new Date(editEndTime);
+														newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+														setEditEndTime(newDate);
+													}
+												}}
+											/>
+										)
 									)}
 									{showEndTimePicker && (
-										<DateTimePicker
-											value={editEndTime}
-											mode="time"
-											display="default"
-											onChange={(event, date) => {
-												setShowEndTimePicker(false);
-												if (date) {
-													const newDate = new Date(editEndTime);
-													newDate.setHours(date.getHours(), date.getMinutes(), 0);
-													setEditEndTime(newDate);
-												}
-											}}
-										/>
+										Platform.OS === 'web' ? (
+											<input
+												type="time"
+												value={`${String(editEndTime.getHours()).padStart(2, '0')}:${String(editEndTime.getMinutes()).padStart(2, '0')}`}
+												onChange={(e) => {
+													setShowEndTimePicker(false);
+													if (e.target.value) {
+														const newDate = new Date(editEndTime);
+														const [hours, minutes] = e.target.value.split(':');
+														newDate.setHours(Number(hours), Number(minutes), 0);
+														setEditEndTime(newDate);
+													}
+												}}
+												style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '10px' }}
+											/>
+										) : (
+											<DateTimePicker
+												value={editEndTime}
+												mode="time"
+												display="default"
+												onChange={(event, date) => {
+													setShowEndTimePicker(false);
+													if (date) {
+														const newDate = new Date(editEndTime);
+														newDate.setHours(date.getHours(), date.getMinutes(), 0);
+														setEditEndTime(newDate);
+													}
+												}}
+											/>
+										)
 									)}
 								</View>
 							)}
@@ -822,7 +897,6 @@ export default function LiveSession() {
 									<Text style={styles.friendsSectionTitle}>
 										Invite more friends
 									</Text>
-
 									<View style={styles.friendsContainer}>
 										{newCollaborators.map((friend) => (
 											<View key={friend.id} style={styles.friendBadge}>
@@ -833,29 +907,27 @@ export default function LiveSession() {
 											</View>
 										))}
 									</View>
-
-									<TextInput 
-										value={friendSearchQuery} 
-										onChangeText={setFriendSearchQuery} 
-										placeholder="Search for a friend..." 
+									<TextInput
+										value={friendSearchQuery}
+										onChangeText={setFriendSearchQuery}
+										placeholder="Search for a friend..."
 										placeholderTextColor={COLORS.textMuted}
-										autoCapitalize="none" 
-										style={styles.modalInput} 
+										autoCapitalize="none"
+										style={styles.modalInput}
 									/>
 									
 									{filteredFriends.map((friend: any) => {
 										const friendUser = friend.sender?.username === myUsername ? friend.receiver : friend.sender;
-										
-										if (invitedUsers.some(u => u.id === friendUser.id)) return null; 
+										if (invitedUsers.some(u => u.id === friendUser.id)) return null;
 										if (newCollaborators.some(f => f.id === friendUser.id)) return null;
-
+										
 										return (
-											<TouchableOpacity 
-												key={friendUser.id} 
-												onPress={() => { 
+											<TouchableOpacity
+												key={friendUser.id}
+												onPress={() => {
 													setNewCollaborators(prev => [...prev, { id: friendUser.id, username: friendUser.username }]);
-													setFriendSearchQuery(""); 
-												}} 
+													setFriendSearchQuery("");
+												}}
 												style={styles.friendSelectBtn}
 											>
 												<Text style={styles.friendSelectBtnText}>{friendUser.username}</Text>
@@ -875,7 +947,6 @@ export default function LiveSession() {
 								}}>
 									<Text style={styles.cancelButtonText}> Cancel </Text>
 								</TouchableOpacity>
-
 								<TouchableOpacity style={styles.saveButton} onPress={handleSaveSettings}>
 									<Text style={styles.saveButtonText}> Save </Text>
 								</TouchableOpacity>
@@ -927,6 +998,32 @@ const styles = StyleSheet.create({
 	headerRightActions: {
 		flexDirection: "row",
 		alignItems: "center",
+	},
+	eventDetailsContainer: {
+		backgroundColor: COLORS.white,
+		marginTop: 8,
+		marginBottom: 16,
+		padding: 16,
+		borderRadius: 16,
+		borderWidth: 1,
+		borderColor: COLORS.cardBorder,
+		gap: 12,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.03,
+		shadowRadius: 4,
+		elevation: 1,
+	},
+	eventDetailRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 10,
+	},
+	eventDetailText: {
+		flex: 1,
+		fontFamily: FONTS.medium,
+		fontSize: 14,
+		color: COLORS.textPrimary,
 	},
 	actionBar: {
 		flexDirection: "row",

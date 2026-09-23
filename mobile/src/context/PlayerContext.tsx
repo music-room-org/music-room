@@ -72,10 +72,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 			webSoundRef.current.pause();
 			webSoundRef.current = null;
 		}
+
 		if (currentTrackRef.current?.id) {
 			cleanBackendAudio(currentTrackRef.current.id);
+			currentTrackRef.current = null;
 		}
-		currentTrackRef.current = null;
+
 		setCurrentTrack(null);
 		setIsPlaying(false);
 		setPositionMillis(0);
@@ -104,7 +106,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 	// Continuous position & duration updater while playing
 	useEffect(() => {
 		let interval: ReturnType<typeof setInterval> | null = null;
-
 		if (isPlaying) {
 			interval = setInterval(() => {
 				const nativePlayer = nativePlayerRef.current;
@@ -127,7 +128,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 				}
 			}, 300);
 		}
-
 		return () => {
 			if (interval) clearInterval(interval);
 		};
@@ -136,11 +136,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 	const openModal = () => setIsModalOpen(true);
 	const closeModal = () => setIsModalOpen(false);
 
-
 	const playNextTrack = async () => {
 		if (currentIndexRef.current + 1 < queueRef.current.length) {
 			currentIndexRef.current += 1;
-			
 			const nextTrack = queueRef.current[currentIndexRef.current];
 			await playTrack(nextTrack, true);
 		}
@@ -152,24 +150,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 			const previousTrack = queueRef.current[currentIndexRef.current];
 			await playTrack(previousTrack, true);
 		}
-	}
+	};
 
 	const playQueue = async (tracks: Track[], startIndex: number) => {
 		queueRef.current = tracks;
 		currentIndexRef.current = startIndex;
-
 		await playTrack(tracks[startIndex], true);
 	};
 
 	const playTrack = async (track: Track, fromQueue = false) => {
+		// Prévention immédiate des ID invalides bloquant l'API sur le Web
+		if (!track || !track.id) {
+			console.error("Erreur: ID de piste manquant ou invalide.");
+			setIsLoading(false);
+			return;
+		}
+
 		try {
 			isTransitioningRef.current = false;
-
+			
 			if (!fromQueue) {
 				queueRef.current = [];
 			}
-
+			
 			setIsLoading(true);
+
 			const previousTrackId = currentTrackRef.current?.id;
 			currentTrackRef.current = track;
 			setCurrentTrack(track);
@@ -200,26 +205,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 			if (createAudioPlayer) {
 				try {
 					const player = createAudioPlayer(streamUrl);
-					
 					player.addListener('playbackStatusUpdate', (status: any) => {
 						if (status) {
-							if (currentTrackRef.current?.id !== track.id) { // race condition 
+							if (currentTrackRef.current?.id !== track.id) {
+								// race condition 
 								return; 
 							}
 							const playing = status.status === 'playing' || status.playing;
 							setIsPlaying(playing);
 							setIsLoading(status.status === 'loading' || status.isBuffering);
+							
 							if (typeof status.currentTime === 'number') setPositionMillis(status.currentTime * 1000);
 							if (typeof status.duration === 'number' && status.duration > 0) setDurationMillis(status.duration * 1000);
 
 							// If playback finished (duration > 0 and near end)
 							if (
-								status.didJustFinish ||
+								status.didJustFinish || 
 								(status.duration > 2 && typeof status.currentTime === 'number' && status.currentTime >= status.duration - 0.5)
 							) {
-
 								if (isTransitioningRef.current) return;
 								isTransitioningRef.current = true;
+								
 								// Verification de si c'est une playlist ou pas
 								if (queueRef.current.length > 0 && currentIndexRef.current + 1 < queueRef.current.length) {
 									playNextTrack();
@@ -233,7 +239,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
 					player.play();
 					nativePlayerRef.current = player;
-
 					setIsPlaying(true);
 					setIsLoading(false);
 					return;
@@ -245,6 +250,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 			// Web Audio API Fallback
 			if (typeof window !== 'undefined' && (window as any).Audio) {
 				const audio = new (window as any).Audio(streamUrl);
+				
 				audio.play().then(() => {
 					setIsPlaying(true);
 					setIsLoading(false);
@@ -260,15 +266,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 						setDurationMillis(audio.duration * 1000);
 					}
 				};
-				audio.onended = () => {
 
-					if (currentTrackRef.current?.id !== track.id) { // race condition 
+				audio.onended = () => {
+					if (currentTrackRef.current?.id !== track.id) {
+						// race condition 
 						return; 
 					}
-
 					if (isTransitioningRef.current) return;
 					isTransitioningRef.current = true;
-
+					
 					if (queueRef.current.length > 0 && currentIndexRef.current + 1 < queueRef.current.length) {
 						playNextTrack();
 					} else {
