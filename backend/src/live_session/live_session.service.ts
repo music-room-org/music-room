@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371e3; 
@@ -18,9 +18,9 @@ function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: num
 
 @Injectable()
 export class LiveSessionService {
-    private prisma = new PrismaClient();
+    
 
-    constructor() {}
+    constructor(private readonly prisma: PrismaService) {}
 
     async createLiveSession(
         name: string, 

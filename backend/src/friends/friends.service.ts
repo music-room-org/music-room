@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaClient, FriendshipStatus } from '@prisma/client';
+import { FriendshipStatus } from '@prisma/client';
 import { FriendsGateway } from './friends.gateway';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class FriendsService {
-	private prisma = new PrismaClient();
-	constructor(private readonly friendsGateway: FriendsGateway) {}
+	constructor(private readonly friendsGateway: FriendsGateway,
+		private readonly prisma: PrismaService
+	) {}
 
 	async sendFriendRequest(senderId: string, receiverId: string) {
 		const existingFriendship = await this.prisma.friendship.findFirst({

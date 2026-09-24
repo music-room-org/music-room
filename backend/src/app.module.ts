@@ -2,24 +2,28 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health.controller';
-import { AuthController } from './controller';
+import { AuthModule } from './auth/auth.module';
 import { FriendsModule } from './friends/friends.module';
-import { PlaylistController } from './playlist.controller';
+import { PlaylistModule } from './playlist/playlist.module';
 import { PlayerModule } from './player/player.module';
-import { LiveSessionController } from './live_session.controller';
-import { LiveSessionService } from './services/live_session';
+import { LiveSessionModule } from './live_session/live_session.module';
+import { LiveSessionService } from './live_session/live_session.service';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [PlayerModule, PrismaModule, FriendsModule],
-  controllers: [
-    AppController,
-    HealthController,
-    AuthController,
-    PlaylistController,
-    LiveSessionController
-  ],
-  providers: [AppService, LiveSessionService],
+	imports: [
+		PlayerModule,
+		PrismaModule,
+		FriendsModule,
+		AuthModule,
+		LiveSessionModule,
+		PlayerModule
+	],
+	controllers: [
+		AppController,
+		HealthController,
+	],
+	providers: [AppService, LiveSessionService],
 })
-export class AppModule {}
+export class AppModule { }
 
